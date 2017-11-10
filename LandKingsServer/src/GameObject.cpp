@@ -1,15 +1,9 @@
-#include "GameObject.h"
+#include "../include/GameObject.h"
 
-GameObject::GameObject() {}
+using namespace Engine;
 
-Point GameObject::getPosition() {
-    return position;
-}
+GameObject::GameObject(Position pos, HitBox hbox) : position(pos), hbox(hbox) {}
 
-std::string GameObject::getName() {
-    return name;
-}
+Character::Character(Position pos, HitBox hbox) : GameObject(pos, hbox) {}
 
-Character::Character() {}
-
-Obstacle::Obstacle() {}
+//Obstacle::Obstacle() {}

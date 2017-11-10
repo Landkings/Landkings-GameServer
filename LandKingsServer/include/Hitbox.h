@@ -1,5 +1,7 @@
 #pragma once
 
+namespace Engine {
+
 class HitBox {
 public:
     HitBox(int length = 0, int width = 0);
@@ -9,3 +11,5 @@ private:
     int height;
     int width;
 };
+
+}
