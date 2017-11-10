@@ -2,6 +2,7 @@
 #include <string>
 #include <memory>
 
+#include "Scene.h"
 #include "Position.h"
 #include "Hitbox.h"
 
@@ -21,7 +22,7 @@ protected:
     HitBox hbox;
     std::string name; //?
 };
-typedef std::shared_ptr<GameObject> PGameObject;
+//typedef std::shared_ptr<GameObject> PGameObject;
 
 //class Obstacle : public GameObject {
 //public:
@@ -40,6 +41,7 @@ typedef std::shared_ptr<GameObject> PGameObject;
 class Character : public GameObject {
 public:
     Character(Position pos = Position(), HitBox hbox = HitBox());
+    void move(Scene& scene);
 protected:
     int hitPoints;
     int speed;

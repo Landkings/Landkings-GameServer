@@ -1,4 +1,5 @@
 #pragma once
+#include "Scene.h"
 
 namespace Engine {
 
@@ -7,6 +8,7 @@ public:
     Engine();
     void run();
 private:
+    Scene scene;
 };
 
 }
