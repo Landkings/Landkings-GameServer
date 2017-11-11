@@ -16,7 +16,10 @@ public:
     HitBox getHitbox() { return hbox; }
     void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     std::string getName() { return name; }
+
     virtual bool isPassable() { return false; }
+    virtual void update(Scene &scene) = 0;
+
 protected:
     Position position;
     HitBox hbox;
@@ -41,8 +44,11 @@ protected:
 class Character : public GameObject {
 public:
     Character(Position pos = Position(), HitBox hbox = HitBox());
-    void move(Scene& scene);
+    void update(Scene& scene) override;
+    int getSpeed() { return speed; }
+
 protected:
+    void move(Scene& scene);
     int hitPoints;
     int speed;
 };

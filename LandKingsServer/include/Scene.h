@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "Constants.h"
+#include "Position.h"
 
 namespace Engine {
 
@@ -12,12 +13,12 @@ typedef std::shared_ptr<GameObject> PGameObject;
 class Scene {
 public:
     Scene();
-    void move(GameObject* object);
+    void move(GameObject *object, Position &new_pos);
     void update();
 private:
-
+    bool validPosition(Position &pos);
     std::vector<PGameObject> objects;
-    int length;
+    int height;
     int width;
 };
 
