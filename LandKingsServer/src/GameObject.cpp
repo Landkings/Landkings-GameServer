@@ -25,6 +25,20 @@ Character::Character(Scene *scene, Position pos, HitBox hbox) : GameObject(scene
     luaL_openlibs(L);
     lua_pushcfunction(L, &dispatch<&Character::move>);
     lua_setglobal(L, "test");
+void Character::update(Scene &scene) {
+    move(scene);
+}
+
+// private methods
+
+void Character::move(Scene &scene) {
+    Position direction[4] = {
+        Position(1, 0),
+        Position(0, 1),
+        Position(-1,0),
+        Position(0, -1)
+    };
+    scene.move(this, position + direction[0] * speed);
 }
 
 void Character::move() {

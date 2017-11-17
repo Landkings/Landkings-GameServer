@@ -10,6 +10,7 @@ public:
     Engine();
     void run();
 private:
+    void update();
     Scene scene;
 };
 

@@ -12,6 +12,7 @@ public:
     void setY(int ny) { y = ny; }
     Position operator + (Position& right);
     Position operator - (Position& right);
+    Position operator * (int val);
     double abs();
 private:
     int x, y;

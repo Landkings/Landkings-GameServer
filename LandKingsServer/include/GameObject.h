@@ -18,7 +18,10 @@ public:
     HitBox getHitbox() { return hbox; }
     void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     std::string getName() { return name; }
+
     virtual bool isPassable() { return false; }
+    virtual void update(Scene &scene) = 0;
+
 protected:
     Position position;
     HitBox hbox;
@@ -46,7 +49,8 @@ public:
     Character(Scene *scene, Position pos = Position(), HitBox hbox = HitBox());
     void move();
     int test(lua_State *state);
-protected:
+	void update(Scene& scene) override;
+    int getSpeed() { return speed; }
     int move(lua_State *state);
     int hitPoints;
     int speed;
