@@ -1,4 +1,4 @@
-#include "../include/Hitbox.h"
+#include "Hitbox.h"
 
 using namespace Engine;
 

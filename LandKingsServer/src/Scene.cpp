@@ -1,5 +1,5 @@
-#include "../include/Scene.h"
-#include "../include/GameObject.h"
+#include "Scene.h"
+#include "GameObject.h"
 using namespace Engine;
 
 Scene::Scene() {
