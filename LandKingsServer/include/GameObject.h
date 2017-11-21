@@ -10,11 +10,24 @@
 
 namespace Engine {
 
+enum Action {
+    Empty = -1,
+    Move = 0,
+};
+
+enum Direction {
+    Unknown = -1,
+    Up = 0,
+    Right = 1,
+    Down = 2,
+    Left =3
+};
+
 class GameObject {
 public:
     GameObject(Scene* scene, Position pos = Position(), HitBox hbox = HitBox());
-    Position getPosition() { return position; }
-    void setPosition(Position& pos) { position = pos; }
+    Position getPosition() const { return position; }
+    void setPosition(Position pos) { position = pos; }
     HitBox getHitbox() { return hbox; }
     void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     std::string getName() { return name; }
@@ -48,10 +61,13 @@ class Character : public GameObject {
 public:
     Character(Scene *scene, Position pos = Position(), HitBox hbox = HitBox());
     void move();
+    void move(Scene& scene);
     int test(lua_State *state);
 	void update(Scene& scene) override;
     int getSpeed() { return speed; }
+protected:
     int move(lua_State *state);
+    Action action;
     int hitPoints;
     int speed;
     lua_State *L;
