@@ -4,6 +4,7 @@
 
 #include "Engine.h"
 #include "lua.hpp"
+#include "Position.h"
 //#include "luawrapper.hpp"
 
 using namespace std;

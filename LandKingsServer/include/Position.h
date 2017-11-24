@@ -1,5 +1,9 @@
 #pragma once
 #include <cmath>
+#include <iostream>
+
+#include "lua.hpp"
+#include "LuaHelper.h"
 
 namespace Engine {
 
@@ -15,7 +19,10 @@ public:
     Position operator * (int val);
     Position operator = (const Position& right);
     double abs();
+    void luaPush(lua_State *state);
 private:
+    int getX(lua_State *state);
+    int getY(lua_State *state);
     int x, y;
 };
 

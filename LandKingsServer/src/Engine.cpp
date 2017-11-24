@@ -3,7 +3,10 @@
 Engine::Engine::Engine() {}
 
 void Engine::Engine::run() {
-    scene.addObject((PGameObject)(new Character(&scene)));
+//    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
+//    scene.addObject((PGameObject)(new Character(&scene, Position(0, 10), "p2.lua")));
+    scene.addObject(new Character(&scene, Position(0, 0), "p1.lua"));
+    scene.addObject(new Character(&scene, Position(0, 10), "p2.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
@@ -18,8 +21,7 @@ void Engine::Engine::run() {
         //}
 
         scene.print();
-        Sleep(100); // TODO: replace sleep with cross platform
-        //std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
