@@ -3,7 +3,7 @@ project(LandKingsServer)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11" )
 
-#file(GLOB headers "include/*.h")
+file(GLOB headers "include/*.h")
 include_directories("include/" "lib/lua/include/")
 file(GLOB sources "src/*.cpp")
 #file(GLOB lua "lib/lua/include/*")
