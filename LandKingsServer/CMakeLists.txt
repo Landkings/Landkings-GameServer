@@ -11,7 +11,3 @@ file(GLOB sources "src/*.cpp")
 link_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib/lua/lib/)
 add_executable(${PROJECT_NAME} "main.cpp" ${headers} ${sources} ${lua} ${lua_wrapper})
 target_link_libraries(${PROJECT_NAME} "liblua.a")
-ADD_CUSTOM_COMMAND(TARGET ${PROJECT_NAME}
-    POST_BUILD
-    COMMAND main
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})

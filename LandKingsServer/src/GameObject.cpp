@@ -35,14 +35,14 @@ Character::Character(Scene *scene, Position pos, std::string tmpLuaName, HitBox 
     luaL_openlibs(L);
     //lua_pushglobaltable(L); //TODO: replace with a safe environment
     luaL_Reg characterMethods[] = {
-        "setAction",    dispatch<Character, setAction>,
-        "getAction",    dispatch<Character, getAction>,
-        "setDirection", dispatch<Character, setDirection>,
-        "getDirection", dispatch<Character, getDirection>,
-        "setTarget",    dispatch<Character, setTarget>,
-        "getTarget",    dispatch<Character, getTarget>,
-        "getPosition",  dispatch<Character, getPosition>,
-        "write",        dispatch<Character, write>,
+        "setAction",    dispatch<Character, &Character::setAction>,
+        "getAction",    dispatch<Character, &Character::getAction>,
+        "setDirection", dispatch<Character, &Character::setDirection>,
+        "getDirection", dispatch<Character, &Character::getDirection>,
+        "setTarget",    dispatch<Character, &Character::setTarget>,
+        "getTarget",    dispatch<Character, &Character::getTarget>,
+        "getPosition",  dispatch<Character, &Character::getPosition>,
+        "write",        dispatch<Character, &Character::write>,
         nullptr, nullptr
     };
     luaL_setfuncs(L, characterMethods, 0);

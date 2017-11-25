@@ -5,7 +5,7 @@ Engine::Engine::Engine() {}
 void Engine::Engine::run() {
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 10), "p2.lua")));
-    scene.addObject(new Character(&scene, Position(0, 0), "p1.lua"));
+    scene.addObject(new Character(&scene, Position(0, 5), "p1.lua"));
     scene.addObject(new Character(&scene, Position(0, 10), "p2.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;

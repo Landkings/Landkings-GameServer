@@ -34,8 +34,8 @@ void Position::luaPush(lua_State *state) {
         lua_setfield(state, -2, "__index");
 
         luaL_Reg PositionMethods[] = {
-            "getX", &dispatch<Position, getX>,
-            "getY", &dispatch<Position, getY>,
+            "getX", &dispatch<Position, &Position::getX>,
+            "getY", &dispatch<Position, &Position::getY>,
             nullptr, nullptr
         };
         luaL_setfuncs(state, PositionMethods, 0);

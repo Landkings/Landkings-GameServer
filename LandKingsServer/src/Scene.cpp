@@ -1,5 +1,7 @@
 #include "Scene.h"
 #include "GameObject.h"
+#include <windows.h> //TODO: delete include
+#include <iomanip>
 
 using namespace Engine;
 
@@ -49,10 +51,37 @@ void Scene::addObject(GameObject *obj) {
 }
 
 void Scene::print() {
+//    for (auto object : objects) {
+//        std::cout << object->tmpLuaName << "\nPosition: " << object->getPosition().getX() << ' ' <<
+//                     object->getPosition().getY() << "\nHp: " << ((Character*)object)->getHp() << std::endl;
+//    }
+    COORD coord;
+    coord.X = 0;
+    coord.Y = 0;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+    //system("CLS");
     for (auto object : objects) {
-        std::cout << object->tmpLuaName << "\nPosition: " << object->getPosition().getX() << ' ' <<
-                     object->getPosition().getY() << "\nHp: " << ((Character*)object)->getHp() << std::endl;
+        std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;
     }
+    std::vector<std::string> sc;
+    for (int i = 0; i < 20; ++i) {
+        std::string tmp = "";
+        for (int j = 0; j < 25; ++j) {
+            tmp += '.';
+        }
+        sc.push_back(tmp);
+    }
+    for (auto object : objects) {
+        Position pos = object->getPosition();
+        sc[pos.getY()][pos.getX()] = 'X';
+    }
+    for (auto& row : sc) {
+        for (auto& col : row) {
+            std::cout << col;
+        }
+        std::cout << "\n";
+    }
+    std::cout << std::flush;
 }
 
 void Scene::luaReg(lua_State *L) {
@@ -63,7 +92,7 @@ void Scene::luaReg(lua_State *L) {
         lua_setfield(L, -2, "__index");
 
         luaL_Reg ScannerMethods[] = {
-            "getObjects", dispatch<Scene, getObjects>,
+            "getObjects", dispatch<Scene, &Scene::getObjects>,
             nullptr, nullptr
         };
         luaL_setfuncs(L, ScannerMethods, 0);
