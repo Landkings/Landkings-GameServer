@@ -14,9 +14,12 @@ class Engine {
 public:
     Engine();
     void run();
+    Scene* getScene();
 private:
     void update();
     Scene scene;
 };
 
 }
+
+extern Engine::Engine* enginePtr;

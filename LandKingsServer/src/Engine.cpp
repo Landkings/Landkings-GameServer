@@ -1,5 +1,9 @@
 #include "Engine.h"
 
+#include "WsServer.h"
+
+static constexpr uint16_t defaultServerPort = 19999;
+
 Engine::Engine::Engine() {}
 
 void Engine::Engine::run() {
@@ -10,6 +14,19 @@ void Engine::Engine::run() {
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
+
+    std::thread serverThread([]
+    {
+        WsServer server;
+        if (!server.start(defaultServerPort))
+        {
+            std::cout << "Server cant start" << std::endl;
+            std::cout << server.error() << std::endl;
+        }
+    });
+    serverThread.join();
+
+
  	while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
@@ -27,4 +44,9 @@ void Engine::Engine::run() {
 
 void Engine::Engine::update() {
     scene.update();
+}
+
+Engine::Scene* Engine::Engine::getScene()
+{
+    return &scene;
 }

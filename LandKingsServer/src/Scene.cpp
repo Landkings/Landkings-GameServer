@@ -1,6 +1,6 @@
 #include "Scene.h"
 #include "GameObject.h"
-#include <windows.h> //TODO: delete include
+//#include <windows.h> //TODO: delete include
 #include <iomanip>
 
 using namespace Engine;
@@ -55,10 +55,12 @@ void Scene::print() {
 //        std::cout << object->tmpLuaName << "\nPosition: " << object->getPosition().getX() << ' ' <<
 //                     object->getPosition().getY() << "\nHp: " << ((Character*)object)->getHp() << std::endl;
 //    }
+    /* windows.h
     COORD coord;
     coord.X = 0;
     coord.Y = 0;
     SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+    */
     //system("CLS");
     for (auto object : objects) {
         std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;

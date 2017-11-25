@@ -9,8 +9,11 @@
 
 using namespace std;
 
+Engine::Engine* enginePtr;
+
 int main(int argc, char* argv[]) {
     Engine::Engine engine;
+    enginePtr = &engine;
     engine.run();
     return 0;
 }

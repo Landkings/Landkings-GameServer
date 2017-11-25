@@ -76,8 +76,8 @@ void Character::luaPush(lua_State *state) {
         lua_setfield(state, -2, "__index");
 
         luaL_Reg characterMethods[] = {
-            "getPosition", dispatch<Character, getObjectPosition>,
-            "test",        dispatch<Character, test>,
+            "getPosition", dispatch<Character, &Character::getObjectPosition>,
+            "test",        dispatch<Character, &Character::test>,
             nullptr, nullptr
         };
         luaL_setfuncs(state, characterMethods, 0);
