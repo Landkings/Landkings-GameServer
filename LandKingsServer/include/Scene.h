@@ -26,6 +26,7 @@ public:
     void addObject(GameObject *obj);
     void print();
     void luaReg(lua_State *L);
+    std::vector<GameObject*> getObjects() { return objects; }
 private:
     bool validPosition(const Position &pos);
     //int test(lua_State *L);
