@@ -49,16 +49,18 @@ void WsServer::runHubLoop(uint16_t port)
     _hub.onMessage([this](uWS::WebSocket<uWS::SERVER>* ws, char* message, size_t length, uWS::OpCode opCode)
     {
         cout << string(message).substr(0, length) << endl;
-        ptree pt;
+        ptree incoming;
         stringstream jsonStream;
         jsonStream << string(message).substr(0, length);
-        json_parser::read_json(jsonStream, pt);
-        string type = pt.get<string>("messageType");
+        json_parser::read_json(jsonStream, incoming);
+        string type = incoming.get<string>("messageType");
         if (type == "getCharacters")
         {
             ptree objectsJson;
+            ptree playersJson;
             vector<GameObject*> objects = enginePtr->getScene().getObjects();
-            createObjectsJson(objects, objectsJson);
+            createObjectsJson(objects, playersJson);
+            objectsJson.put_child("players", playersJson);
             stringstream ss;
             json_parser::write_json(ss, objectsJson);
             ws->send(ss.str().data(), ss.str().length(), opCode);
@@ -76,7 +78,7 @@ void WsServer::createObjectsJson(vector<GameObject*> objects, ptree& pt)
         ptree ptObject;
         ptObject.put("x", object->getPosition().getX());
         ptObject.put("y", object->getPosition().getY());
-        pt.put_child(to_string(i), ptObject);
+        pt.push_back(make_pair("", ptObject));
         // TODO: pt.put_child(object->getName(), ptObject);
     }
 }
