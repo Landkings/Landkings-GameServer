@@ -60,7 +60,7 @@ void WsServer::runHubLoop(uint16_t port)
             vector<GameObject*> objects = enginePtr->getScene().getObjects();
             createObjectsJson(objects, objectsJson);
             stringstream ss;
-            json_parser::write_json(ss, pt);
+            json_parser::write_json(ss, objectsJson);
             ws->send(ss.str().data(), ss.str().length(), opCode);
         }
     });
@@ -76,7 +76,8 @@ void WsServer::createObjectsJson(vector<GameObject*> objects, ptree& pt)
         ptree ptObject;
         ptObject.put("x", object->getPosition().getX());
         ptObject.put("y", object->getPosition().getY());
-        pt.put_child(object->getName(), ptObject);
+        pt.put_child(to_string(i), ptObject);
+        // TODO: pt.put_child(object->getName(), ptObject);
     }
 }
 
