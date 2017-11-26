@@ -4,6 +4,7 @@
 #include <atomic>
 #include <iostream>
 #include <functional>
+
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
@@ -13,7 +14,8 @@
 using namespace std;
 using namespace uWS;
 using namespace Engine;
-using boost::property_tree::ptree;
+using namespace boost::property_tree;
+
 
 WsServer::WsServer() : _running(false)
 {
@@ -38,12 +40,11 @@ bool WsServer::start(uint16_t port)
         return false;
     }
     runHubLoop(port);
-    return _running;
+    return true;
 }
 
 void WsServer::runHubLoop(uint16_t port)
 {
-    cout << "running" << endl;
     // TODO set callbacks
     _hub.onMessage([this](uWS::WebSocket<uWS::SERVER>* ws, char* message, size_t length, uWS::OpCode opCode)
     {
@@ -51,14 +52,15 @@ void WsServer::runHubLoop(uint16_t port)
         ptree pt;
         stringstream jsonStream;
         jsonStream << string(message).substr(0, length);
+        json_parser::read_json(jsonStream, pt);
         string type = pt.get<string>("messageType");
         if (type == "getCharacters")
         {
             ptree objectsJson;
-            vector<GameObject*> characters = enginePtr->getScene()->getObjects();
-            getObjectsJson(characters, objectsJson);
+            vector<GameObject*> objects = enginePtr->getScene().getObjects();
+            createObjectsJson(objects, objectsJson);
             stringstream ss;
-            boost::property_tree::json_parser::write_json(ss, pt);
+            json_parser::write_json(ss, pt);
             ws->send(ss.str().data(), ss.str().length(), opCode);
         }
     });
@@ -66,7 +68,7 @@ void WsServer::runHubLoop(uint16_t port)
     _hub.run();
 }
 
-void WsServer::getObjectsJson(std::vector<Engine::GameObject*> objects, ptree& pt)
+void WsServer::createObjectsJson(vector<GameObject*> objects, ptree& pt)
 {
     for (int i = 0; i < objects.size(); ++i)
     {
@@ -74,7 +76,7 @@ void WsServer::getObjectsJson(std::vector<Engine::GameObject*> objects, ptree& p
         ptree ptObject;
         ptObject.put("x", object->getPosition().getX());
         ptObject.put("y", object->getPosition().getY());
-        pt.add_child(object->getName(), ptObject);
+        pt.put_child(object->getName(), ptObject);
     }
 }
 
@@ -84,7 +86,7 @@ void WsServer::stop()
     _running = false;
 }
 
-bool WsServer::running()
+bool WsServer::running() const
 {
     return _running;
 }
@@ -98,7 +100,7 @@ string WsServer::error()
     return ret;
 }
 
-size_t WsServer::errorCounter()
+size_t WsServer::errorCounter() const
 {
     return _errorList.size();
 }

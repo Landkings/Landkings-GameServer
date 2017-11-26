@@ -144,3 +144,8 @@ Position Scene::findDirection(GameObject *from, GameObject *to) {
         return Position(0, diff/abs(diff));
     }
 }
+
+const std::vector<GameObject*>& Scene::getObjects() const
+{
+    return objects;
+}

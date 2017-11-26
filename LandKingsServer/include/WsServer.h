@@ -17,15 +17,15 @@ public:
     bool start(uint16_t port);
     void stop();
     std::string error();
-    size_t errorCounter();
-    bool running();
-    bool ready();
-    void getObjectsJson(std::vector<Engine::GameObject*> objects, boost::property_tree::ptree& pt);
+    size_t errorCounter() const;
+    bool running() const;
+
 private:
     uWS::Hub _hub;
     bool _running;
-    bool _ready;
     std::list<std::string> _errorList;
+
+    void createObjectsJson(std::vector<Engine::GameObject*> objects, boost::property_tree::ptree& pt);
 
     void runHubLoop(uint16_t port);
     // TODO:

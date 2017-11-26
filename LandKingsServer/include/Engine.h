@@ -14,8 +14,9 @@ class Engine {
 public:
     Engine();
     void run();
-    Scene* getScene();
+    const Scene& getScene() const;
 private:
+    void startServer();
     void update();
     Scene scene;
 };

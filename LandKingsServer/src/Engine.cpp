@@ -2,6 +2,8 @@
 
 #include "WsServer.h"
 
+Engine::Engine* enginePtr;
+
 static constexpr uint16_t defaultServerPort = 19999;
 
 Engine::Engine::Engine() {}
@@ -15,17 +17,27 @@ void Engine::Engine::run() {
     auto lag = previous - previous;
     int cnt = 0;
 
-    std::thread serverThread([]
+    bool serverRunning = true;
+    std::thread([](bool& running)
     {
         WsServer server;
-        if (!server.start(defaultServerPort))
-        {
-            std::cout << "Server cant start" << std::endl;
-            std::cout << server.error() << std::endl;
-        }
-    });
-    serverThread.join();
+        running = server.start(defaultServerPort);
+    },
+    std::ref(serverRunning)).detach();
 
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    if (serverRunning)
+        std::cout << "Server +" << std::endl;
+    else
+    {
+        std::cout << "Server -" << std::endl;
+        std::exit(1);
+    }
+
+    // test server output
+    int xxx;
+    while (true)
+        ++xxx;
 
  	while (true) {
         //auto current = std::chrono::system_clock::now();
@@ -46,7 +58,7 @@ void Engine::Engine::update() {
     scene.update();
 }
 
-Engine::Scene* Engine::Engine::getScene()
+const Engine::Scene& Engine::Engine::getScene() const
 {
-    return &scene;
+    return scene;
 }
