@@ -52,8 +52,17 @@ void WsServer::runHubLoop(uint16_t port)
         ptree incoming;
         stringstream jsonStream;
         jsonStream << string(message).substr(0, length);
-        json_parser::read_json(jsonStream, incoming);
-        string type = incoming.get<string>("messageType");
+        string type;
+        try
+        {
+            json_parser::read_json(jsonStream, incoming);
+            type = incoming.get<string>("messageType");
+        }
+        catch (exception e)
+        {
+            cout << "Receive invalid JSON" << endl;
+            return;
+        }
         if (type == "getCharacters")
         {
             ptree objectsJson;
