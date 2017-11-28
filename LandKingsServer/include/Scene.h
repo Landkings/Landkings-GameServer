@@ -32,7 +32,10 @@ private:
     //int test(lua_State *L);
     int getObjects(lua_State *L);
     Position findDirection(GameObject *from, GameObject *to);
-
+    bool isCollide(const GameObject *first, const GameObject *second);
+    bool isCollide(const Position firstPos, const HitBox firstHitBox, const Position secondPos, const HitBox secondHitBox);
+    bool isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight);
+    bool checkSceneCollision(const GameObject *obj, const Position *newPos);
     //std::vector<PGameObject> objects;
     std::vector<GameObject*> objects;
     std::vector<std::vector<Tile*>> tiles;

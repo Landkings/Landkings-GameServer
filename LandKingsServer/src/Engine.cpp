@@ -11,8 +11,8 @@ Engine::Engine::Engine() {}
 void Engine::Engine::run() {
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 10), "p2.lua")));
-    scene.addObject(new Character(&scene, Position(0, 5), "p1.lua"));
-    scene.addObject(new Character(&scene, Position(0, 10), "p2.lua"));
+    scene.addObject(new Character(&scene, Position(250, 245), "p1.lua"));
+    scene.addObject(new Character(&scene, Position(450, 310), "p2.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
@@ -42,22 +42,19 @@ void Engine::Engine::run() {
     }
 
     // test server output
-    int xxx;
-    while (true)
-       ++xxx;
 
  	while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
-        //previous = current;
+        //previous = xcurrent;
         //lag += elapsed;
         //while (lag >= 30) {
             update();
         //    lag -= 30;
         //}
 
-        scene.print();
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        //scene.print();
+        std::this_thread::sleep_for(std::chrono::milliseconds(16));
     }
 }
 

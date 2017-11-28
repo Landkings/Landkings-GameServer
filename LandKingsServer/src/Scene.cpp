@@ -1,24 +1,26 @@
 #include "Scene.h"
 #include "GameObject.h"
-//#include <windows.h> //TODO: delete include
 #include <iomanip>
 
 using namespace Engine;
 
 //public methods
 
-Scene::Scene() : land(true), wall(true) {
-    height = Constants::SCENE_LENGTH;
-    width = Constants::SCENE_HEIGHT;
+Scene::Scene() : land(true), wall(false) {
+    height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
+    width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
     tiles.resize(height);
-    for (auto row : tiles) {
+    for (auto& row : tiles) {
         row.resize(width, &land);
     }
+    tiles[8][13] =  &wall;
+    tiles[10][13] =  &wall;
 }
 
 void Scene::move(GameObject *object, const Position &new_pos) {
     if (validPosition(new_pos)) {
-        object->setPosition(new_pos);
+        if (!checkSceneCollision(object, &new_pos))
+            object->setPosition(new_pos);
     }
 }
 
@@ -108,8 +110,8 @@ void Scene::luaReg(lua_State *L) {
 bool Scene::validPosition(const Position & pos) {
     return pos.getX() >= 0 &&
            pos.getY() >= 0 &&
-           pos.getX() <= width &&
-           pos.getY() <= height;
+           pos.getX() <= Constants::SCENE_WIDTH &&
+           pos.getY() <= Constants::SCENE_HEIGHT;
 }
 
 //int Scene::test(lua_State *L) {
@@ -145,7 +147,38 @@ Position Scene::findDirection(GameObject *from, GameObject *to) {
     }
 }
 
-const std::vector<GameObject*>& Scene::getObjects() const
-{
+bool Scene::isCollide(const GameObject *first, const GameObject *second) {
+    return isCollide(first->getPosition(), first->getHitbox(), second->getPosition(), second->getHitbox());
+}
+
+bool Scene::isCollide(const Position firstPos, const HitBox firstHitBox, const Position secondPos, const HitBox secondHitBox) {
+    return isCollide(firstPos, firstHitBox.getWidth(), firstHitBox.getHeight(), secondPos, secondHitBox.getWidth(), secondHitBox.getHeight());
+}
+
+bool Scene::isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight) {
+    if (firstPos.getX() < secondPos.getX() + secondWidth &&
+        firstPos.getX() + firstWidth > secondPos.getX() &&
+        firstPos.getY() < secondPos.getY() + secondHeight &&
+        firstPos.getY() + firstHeight > secondPos.getY())  {
+        return true;
+    }
+    return false;
+}
+
+bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) { //TODO AABB tree optimization
+    for (int i = 0; i < tiles.size(); ++i) {
+        for (int j = 0; j < tiles[i].size(); ++j) {
+            if (!tiles[i][j]->isPassable()) {
+                Position tilePos = Position(j * Constants::TILE_WIDTH + Constants::TILE_WIDTH / 2, i * Constants::TILE_HEIGHT + Constants::TILE_HEIGHT / 2);
+                if (isCollide(*newPos, obj->getWidth(), obj->getHeight(), tilePos, Constants::TILE_WIDTH, Constants::TILE_HEIGHT)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }

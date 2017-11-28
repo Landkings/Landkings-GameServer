@@ -58,9 +58,13 @@ public:
     GameObject(Scene* scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox());
     Position getPosition() const { return position; }
     void setPosition(Position pos) { position = pos; }
-    HitBox getHitbox() { return hbox; }
+    HitBox getHitbox() const { return hbox; }
     void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     std::string getName() { return name; }
+    int getX() const { return position.getX(); }
+    int getY() const { return position.getY(); }
+    int getWidth() const { return hbox.getWidth(); }
+    int getHeight() const { return hbox.getHeight(); }
     //std::string getID(); //TODO: make this function
 
     virtual bool isPassable() { return false; }
@@ -76,7 +80,7 @@ protected:
 
 class Character : public GameObject {
 public:
-    Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox());
+    Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
     void move();
     void attack();
     int write(lua_State *state);
