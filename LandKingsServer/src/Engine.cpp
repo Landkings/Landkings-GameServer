@@ -2,8 +2,6 @@
 
 #include "WsServer.h"
 
-Engine::Engine* enginePtr;
-
 static constexpr uint16_t defaultServerPort = 19999;
 
 Engine::Engine::Engine() {}
@@ -18,16 +16,10 @@ void Engine::Engine::run() {
     int cnt = 0;
 
     bool serverRunning = true;
-    std::thread([](bool& running)
+    std::thread([this](bool& running)
     {
-        WsServer server;
+        WsServer server(this);
         running = server.start(defaultServerPort);
-        if (!running)
-        {
-            int s = server.errorCounter();
-            for (int i = 0; i < s; ++i)
-                std::cout << server.error();
-        }
     },
     std::ref(serverRunning)).detach();
 
@@ -37,7 +29,7 @@ void Engine::Engine::run() {
     else
     {
         std::cout << "Server -" << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+        std::this_thread::sleep_for(std::chrono::seconds(1));
         std::exit(1);
     }
 

@@ -7,26 +7,26 @@
 
 #include "uWS.h"
 
-#include "GameObject.h"
+
+namespace Engine
+{
+    class Engine;
+    class GameObject;
+}
 
 class WsServer
 {
 public:
-    WsServer();
+    WsServer(Engine::Engine* engine);
     ~WsServer();
     bool start(uint16_t port);
-    void stop();
-    std::string error();
-    size_t errorCounter() const;
-    bool running() const;
-
 private:
+    Engine::Engine* _engine;
     uWS::Hub _hub;
-    bool _running;
-    std::list<std::string> _errorList;
 
-    void createObjectsJson(std::vector<Engine::GameObject*> objects, boost::property_tree::ptree& pt);
+    void log(std::string msg);
 
+    void objects2Json(std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
     void runHubLoop(uint16_t port);
     // TODO:
     void onConnection();

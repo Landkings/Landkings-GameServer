@@ -4,11 +4,13 @@
 #include <atomic>
 #include <iostream>
 #include <functional>
+#include <chrono>
+#include <fstream>
 
-#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
 #include "Engine.h"
+#include "GameObject.h"
 
 
 using namespace std;
@@ -17,7 +19,7 @@ using namespace Engine;
 using namespace boost::property_tree;
 
 
-WsServer::WsServer() : _running(false)
+WsServer::WsServer(Engine::Engine* engine) : _engine(engine)
 {
 
 }
@@ -27,16 +29,29 @@ WsServer::~WsServer()
 
 }
 
+void WsServer::log(string msg)
+{
+    ofstream logFile("ws-server.log", ios_base::app);
+    stringstream resultMsg;
+    time_t t = time(nullptr);
+    tm* curTime = localtime(&t);
+    resultMsg << '('
+              << setfill('0') << setw(2) << curTime->tm_mday << 'd' << ' '
+              << setfill('0') << setw(2) << curTime->tm_hour << ':'
+              << setfill('0') << setw(2) << curTime->tm_min << ':'
+              << setfill('0') << setw(2) << curTime->tm_sec
+              << ')';
+    resultMsg << ' ' << msg << endl;
+    cout << resultMsg.str();
+    logFile << resultMsg.str();
+    logFile.close();
+}
+
 bool WsServer::start(uint16_t port)
 {
-    if (_running)
-    {
-        _errorList.push_back("Server still running");
-        return false;
-    }
     if (!_hub.listen(port))
     {
-        _errorList.push_back("Cant listen port: " + to_string(port)); // TODO
+        log("Cant listen port: " + to_string(port)); // TODO: info
         return false;
     }
     runHubLoop(port);
@@ -60,26 +75,29 @@ void WsServer::runHubLoop(uint16_t port)
         }
         catch (exception e)
         {
-            cout << "Receive invalid JSON" << endl;
+            log("Receive invalid JSON: " + jsonStream.str());
             return;
         }
         if (type == "getCharacters")
         {
             ptree objectsJson;
             ptree playersJson;
-            vector<GameObject*> objects = enginePtr->getScene().getObjects();
-            createObjectsJson(objects, playersJson);
+            vector<GameObject*> objects = _engine->getScene().getObjects();
+            // TODO:
+            // players = getPlayers(objects);
+            // objects2json(players, playersJson);
+            objects2Json(objects, playersJson);
             objectsJson.put_child("players", playersJson);
             stringstream ss;
             json_parser::write_json(ss, objectsJson);
             ws->send(ss.str().data(), ss.str().length(), opCode);
         }
+
     });
-    _running = true;
     _hub.run();
 }
 
-void WsServer::createObjectsJson(vector<GameObject*> objects, ptree& pt)
+void WsServer::objects2Json(vector<GameObject*>& objects, ptree& pt)
 {
     for (int i = 0; i < objects.size(); ++i)
     {
@@ -90,29 +108,4 @@ void WsServer::createObjectsJson(vector<GameObject*> objects, ptree& pt)
         pt.push_back(make_pair("", ptObject));
         // TODO: pt.put_child(object->getName(), ptObject);
     }
-}
-
-void WsServer::stop()
-{
-    _hub.Group<SERVER>::terminate();
-    _running = false;
-}
-
-bool WsServer::running() const
-{
-    return _running;
-}
-
-string WsServer::error()
-{
-    if (_errorList.empty())
-        return string();
-    string ret = *(_errorList.begin());
-    _errorList.pop_front();
-    return ret;
-}
-
-size_t WsServer::errorCounter() const
-{
-    return _errorList.size();
 }

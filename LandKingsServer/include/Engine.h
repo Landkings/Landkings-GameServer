@@ -22,5 +22,3 @@ private:
 };
 
 }
-
-extern Engine::Engine* enginePtr;
