@@ -33,6 +33,8 @@ void Engine::Engine::run() {
         std::exit(1);
     }
 
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+
     // test server output
 
  	while (true) {

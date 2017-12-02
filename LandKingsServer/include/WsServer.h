@@ -24,10 +24,18 @@ private:
     Engine::Engine* _engine;
     uWS::Hub _hub;
 
-    void log(std::string msg);
+    enum class messageType
+    {
+        unknown, source, characters,
+    };
 
+    void log(std::string msg);
+    messageType getMessageType(boost::property_tree::ptree& message);
     void objects2Json(std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
     void runHubLoop(uint16_t port);
+
+    void processCharactersQuery(uWS::WebSocket<uWS::SERVER>* socket, uWS::OpCode opCode);
+
     // TODO:
     void onConnection();
     void onMessage();

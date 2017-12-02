@@ -12,7 +12,6 @@
 #include "Engine.h"
 #include "GameObject.h"
 
-
 using namespace std;
 using namespace uWS;
 using namespace Engine;
@@ -51,7 +50,7 @@ bool WsServer::start(uint16_t port)
 {
     if (!_hub.listen(port))
     {
-        log("Cant listen port: " + to_string(port)); // TODO: info
+        log("Cant listen port: " + to_string(port));
         return false;
     }
     runHubLoop(port);
@@ -64,37 +63,57 @@ void WsServer::runHubLoop(uint16_t port)
     _hub.onMessage([this](uWS::WebSocket<uWS::SERVER>* ws, char* message, size_t length, uWS::OpCode opCode)
     {
         cout << string(message).substr(0, length) << endl;
-        ptree incoming;
-        stringstream jsonStream;
-        jsonStream << string(message).substr(0, length);
-        string type;
+        ptree incomingJson;
+        stringstream incJsonStream;
+        incJsonStream << string(message).substr(0, length);
         try
         {
-            json_parser::read_json(jsonStream, incoming);
-            type = incoming.get<string>("messageType");
+            json_parser::read_json(incJsonStream, incomingJson);
         }
         catch (exception e)
         {
-            log("Receive invalid JSON: " + jsonStream.str());
+            log("Receive invalid JSON: " + incJsonStream.str());
             return;
         }
-        if (type == "getCharacters")
+        messageType t = getMessageType(incomingJson);
+        switch (t)
         {
-            ptree objectsJson;
-            ptree playersJson;
-            vector<GameObject*> objects = _engine->getScene().getObjects();
-            // TODO:
-            // players = getPlayers(objects);
-            // objects2json(players, playersJson);
-            objects2Json(objects, playersJson);
-            objectsJson.put_child("players", playersJson);
-            stringstream ss;
-            json_parser::write_json(ss, objectsJson);
-            ws->send(ss.str().data(), ss.str().length(), opCode);
+            case messageType::characters:
+                processCharactersQuery(ws, opCode);
         }
-
     });
     _hub.run();
+}
+
+void WsServer::processCharactersQuery(uWS::WebSocket<SERVER>* socket, uWS::OpCode opCode)
+{
+    ptree objectsJson;
+    ptree playersJson;
+    vector<GameObject*> objects = _engine->getScene().getObjects();
+    // TODO:
+    // players = getPlayers(objects);
+    // objects2json(players, playersJson);
+    objects2Json(objects, playersJson);
+    objectsJson.put_child("players", playersJson);
+    stringstream ss;
+    json_parser::write_json(ss, objectsJson);
+    socket->send(ss.str().data(), ss.str().length(), opCode);
+}
+
+WsServer::messageType WsServer::getMessageType(ptree& message)
+{
+    string messageTypeString;
+    try
+    {
+        messageTypeString = message.get<string>("messageType");
+    }
+    catch (exception e)
+    {
+        return messageType::unknown;
+    }
+    if (messageTypeString == "getCharacters")
+        return messageType::characters;
+    return messageType::unknown;
 }
 
 void WsServer::objects2Json(vector<GameObject*>& objects, ptree& pt)
