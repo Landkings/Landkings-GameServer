@@ -33,7 +33,7 @@ void Engine::Engine::run() {
         std::exit(1);
     }
 
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    //std::this_thread::sleep_for(std::chrono::seconds(10));
 
     // test server output
 
@@ -48,7 +48,7 @@ void Engine::Engine::run() {
         //}
 
         //scene.print();
-        std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 

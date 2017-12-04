@@ -13,6 +13,9 @@ Character::Character(Scene *scene, Position pos, std::string tmpLuaName, HitBox 
     direction(Direction::Unknown){
     hitPoints = 100;
     damage = 10;    //TODO: replace with constants
+    speed = 5;
+    nextMoveTime = 0;
+    moveCooldown = 16;
     L = luaL_newstate();
     *static_cast<Character**>(lua_getextraspace(L)) = this;
 
@@ -52,6 +55,21 @@ Character::Character(Scene *scene, Position pos, std::string tmpLuaName, HitBox 
     }
 }
 
+void Character::move() {
+    if (target) {
+        scene->move(this, (GameObject*)target);
+    }
+    else if (direction != Direction::Unknown) {
+        scene->move(this, position + directions[(int)direction]);
+    }
+}
+
+int Character::write(lua_State *state) {
+    const char* msg = luaL_checkstring(state, 1);
+    std::cout << msg << std::endl;
+    return 0;
+}
+
 void Character::update() {
     int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
     scene->luaReg(L);
@@ -66,6 +84,10 @@ void Character::update() {
     case Action::Empty:
     default:;
     }
+}
+
+void Character::setNextMoveTime() {
+    nextMoveTime = scene->getTime() + (long long)moveCooldown;
 }
 
 void Character::luaPush(lua_State *state) {
@@ -85,28 +107,11 @@ void Character::luaPush(lua_State *state) {
     lua_setmetatable(state, -2);
 }
 
-// private methods
-
-void Character::move() {
-    if (target) {
-        scene->move(this, (GameObject*)target);
-    }
-    else if (direction != Direction::Unknown) {
-        scene->move(this, position + directions[(int)direction]);
-    }
-}
-
 void Character::attack() {
     scene->attack(this, (Character*)target);
 }
 
 // private methods
-
-int Character::write(lua_State *state) {
-    const char* msg = luaL_checkstring(state, 1);
-    std::cout << msg << std::endl;
-    return 0;
-}
 
 int Character::setAction(lua_State *state) {
     action = (Action)luaL_checkinteger(state, 1);

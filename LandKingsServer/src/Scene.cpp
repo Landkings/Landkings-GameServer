@@ -9,6 +9,7 @@ using namespace Engine;
 Scene::Scene() : land(true), wall(false) {
     height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
     width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
+    time = 0;
     tiles.resize(height);
     for (auto& row : tiles) {
         row.resize(width, &land);
@@ -18,7 +19,8 @@ Scene::Scene() : land(true), wall(false) {
 }
 
 void Scene::move(GameObject *object, const Position &new_pos) {
-    if (validPosition(new_pos)) {
+    if (((Character*)object)->getNextMoveTime() <= time && validPosition(new_pos)) {
+        ((Character*)object)->setNextMoveTime();
         if (!checkSceneCollision(object, &new_pos))
             object->setPosition(new_pos);
     }
@@ -42,6 +44,7 @@ void Scene::update() {
     for (auto object : objects) {
         object->update();
     }
+    ++time;
 }
 
 //void Scene::addObject(PGameObject obj) {

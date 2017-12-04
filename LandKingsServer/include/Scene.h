@@ -27,6 +27,7 @@ public:
     void print();
     void luaReg(lua_State *L);
     const std::vector<GameObject*>& getObjects() const;
+    long long getTime() const { return time; }
 private:
     bool validPosition(const Position &pos);
     //int test(lua_State *L);
@@ -41,7 +42,7 @@ private:
     std::vector<std::vector<Tile*>> tiles;
     int height;
     int width;
-
+    long long time;
     //todo replace
     Tile land;
     Tile wall;

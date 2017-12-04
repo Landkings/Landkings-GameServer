@@ -91,6 +91,9 @@ public:
     int getDamage() const { return damage; }
     void setDirection(const Direction dir) { direction = dir; }
     void setTarget (const GameObject *targ) { target = targ; }
+    int getSpeedCooldown() const { return speed; }
+    long long getNextMoveTime() const { return nextMoveTime; }
+    void setNextMoveTime();
     void luaPush(lua_State *state);
 protected:
     //int move(lua_State *state);
@@ -109,6 +112,8 @@ protected:
     int hitPoints;
     int speed;
     int damage;
+    long long nextMoveTime;
+    int moveCooldown;
     lua_State *L;
 };
 typedef std::shared_ptr<Character> PCharacter;
