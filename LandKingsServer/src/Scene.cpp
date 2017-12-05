@@ -32,7 +32,7 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    if ((((GameObject*)c1)->getPosition() - ((GameObject*)c2)->getPosition()).abs() != 1.0) {
+    if ((((GameObject*)c1)->getPosition() - ((GameObject*)c2)->getPosition()).abs() > 1.0) {
         move(c1, c2);
     }
     else if (c2->getHp() > 0) {
@@ -41,9 +41,8 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
-    for (auto object : objects) {
+    for (auto& object : objects)
         object->update();
-    }
     ++time;
 }
 
@@ -56,20 +55,9 @@ void Scene::addObject(GameObject *obj) {
 }
 
 void Scene::print() {
-//    for (auto object : objects) {
-//        std::cout << object->tmpLuaName << "\nPosition: " << object->getPosition().getX() << ' ' <<
-//                     object->getPosition().getY() << "\nHp: " << ((Character*)object)->getHp() << std::endl;
-//    }
-    /* windows.h
-    COORD coord;
-    coord.X = 0;
-    coord.Y = 0;
-    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
-    */
-    //system("CLS");
-    for (auto object : objects) {
+    for (auto& object : objects)
         std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;
-    }
+
     std::vector<std::string> sc;
     for (int i = 0; i < 20; ++i) {
         std::string tmp = "";
@@ -111,18 +99,11 @@ void Scene::luaReg(lua_State *L) {
 //private methods
 
 bool Scene::validPosition(const Position & pos) {
-    return pos.getX() >= 0 &&
+    return pos.getX() >= 0 && //TODO add hitboxes
            pos.getY() >= 0 &&
            pos.getX() <= Constants::SCENE_WIDTH &&
            pos.getY() <= Constants::SCENE_HEIGHT;
 }
-
-//int Scene::test(lua_State *L) {
-//    Scene** Pscene = (Scene**)luaL_checkudata(L, 1, "SceneMetaTable");
-//    int x = luaL_checkinteger(L, 2);
-//    std::cout << x << " - passed by lua" << std::endl;
-//    return 0;
-//}
 
 int Scene::getObjects(lua_State *L) {
     Scene* Pscene = *(Scene**)luaL_checkudata(L, 1, "SceneMetaTable");
@@ -169,16 +150,13 @@ bool Scene::isCollide(const Position firstPos, const int firstWidth, const int f
 }
 
 bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) { //TODO AABB tree optimization
-    for (int i = 0; i < tiles.size(); ++i) {
-        for (int j = 0; j < tiles[i].size(); ++j) {
-            if (!tiles[i][j]->isPassable()) {
-                Position tilePos = Position(j * Constants::TILE_WIDTH + Constants::TILE_WIDTH / 2, i * Constants::TILE_HEIGHT + Constants::TILE_HEIGHT / 2);
-                if (isCollide(*newPos, obj->getWidth(), obj->getHeight(), tilePos, Constants::TILE_WIDTH, Constants::TILE_HEIGHT)) {
-                    return true;
-                }
-            }
-        }
-    }
+    for (int i = (newPos->getY() - obj->getHeight() / 2) / Constants::TILE_HEIGHT;
+         i <= (newPos->getY() + obj->getHeight() / 2) / Constants::TILE_HEIGHT; ++i)
+        for (int j = (newPos->getX() - obj->getWidth() / 2) / Constants::TILE_WIDTH;
+             j <= (newPos->getX() + obj->getWidth() / 2) / Constants::TILE_WIDTH; ++j)
+            if (!tiles[i][j]->isPassable())
+                return true;
+
     return false;
 }
 
