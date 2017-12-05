@@ -35,8 +35,6 @@ void Engine::Engine::run() {
 
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
-    // test server output
-
  	while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;

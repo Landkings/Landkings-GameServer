@@ -2,6 +2,7 @@
 #include <sstream>
 #include <list>
 #include <vector>
+#include <fstream>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -23,24 +24,27 @@ public:
 private:
     Engine::Engine* _engine;
     uWS::Hub _hub;
+    std::ofstream _log;
+
 
     enum class messageType
     {
         unknown, source, characters,
     };
 
-    void log(std::string msg);
+    void log(std::string msg, bool inBuffer = false);
     messageType getMessageType(boost::property_tree::ptree& message);
     void objects2Json(std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
     void runHubLoop(uint16_t port);
 
-    void processCharactersQuery(uWS::WebSocket<uWS::SERVER>* socket, uWS::OpCode opCode);
+    void processCharactersQuery(uWS::WebSocket<uWS::SERVER>* socket);
+    void processSourceExecution(uWS::WebSocket<uWS::SERVER>* socket, boost::property_tree::ptree& json);
 
-    // TODO:
-    void onConnection();
-    void onMessage();
-    void onError();
-    void onDisconnection();
-    void onTransfer();
-    void onPing();
+
+    void onConnection(uWS::WebSocket<uWS::SERVER>* socket, uWS::HttpRequest request);
+    void onDisconnection(uWS::WebSocket<uWS::SERVER>* socket, int code, char* message, size_t length);
+    void onMessage(uWS::WebSocket<uWS::SERVER>* socket, char* message, size_t length, uWS::OpCode opCode);
+    void onTransfer(uWS::WebSocket<uWS::SERVER>* socket);
+    void onPing(uWS::WebSocket<uWS::SERVER>* socket, char* message, size_t length);
+    void onError(int err);
 };
