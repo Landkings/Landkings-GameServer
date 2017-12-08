@@ -5,7 +5,6 @@
 #include <iostream>
 #include <functional>
 #include <chrono>
-#include <fstream>
 
 #include <boost/property_tree/json_parser.hpp>
 
@@ -63,8 +62,38 @@ bool WsServer::start(uint16_t port)
         log("Cant listen port: " + to_string(port));
         return false;
     }
+    thread([this]()
+    {
+        while (true) // WsServer custom loop
+        {
+            objectsMessageSending();
+        }
+    }).detach();
     runHubLoop(port);
     return true;
+}
+
+void WsServer::objectsMessageSending()
+{
+    _engine->waitForMutex(_engine->sceneMutex);
+    string objectsMessage = createObjectsMessage();
+    _hub.Group<SERVER>::broadcast(objectsMessage.data(), objectsMessage.length(), TEXT);
+    _engine->sceneMutex.unlock();
+}
+
+string WsServer::createObjectsMessage()
+{
+    ptree objectsJson;
+    ptree playersJson;
+    const vector<GameObject*>& objects = _engine->scene.getObjects(); // TODO: block game server thread
+    // TODO:
+    // players = getPlayers(objects);
+    // objects2json(players, playersJson);
+    objects2Json(objects, playersJson);
+    objectsJson.put_child("players", playersJson);
+    stringstream ss;
+    json_parser::write_json(ss, objectsJson);
+    return ss.str();
 }
 
 void WsServer::onConnection(WebSocket<SERVER>* socket, HttpRequest request)
@@ -96,11 +125,8 @@ void WsServer::onMessage(uWS::WebSocket<SERVER>* socket, char* message, size_t l
     messageType t = getMessageType(incomingJson);
     switch (t)
     {
-        case messageType::characters:
-            processCharactersQuery(socket);
-            return;
-        case messageType::source:
-            processSourceExecution(socket, incomingJson);
+        case messageType::sourceCode:
+            processPlayerSource(socket, incomingJson);
             return;
         default:
             socket->send("Not implemented");
@@ -146,29 +172,23 @@ void WsServer::runHubLoop(uint16_t port)
     _hub.run();
 }
 
-void WsServer::processCharactersQuery(uWS::WebSocket<SERVER>* socket)
+void WsServer::processPlayerSource(uWS::WebSocket<SERVER>* socket, ptree& json)
 {
-    ptree objectsJson;
-    ptree playersJson;
-    vector<GameObject*> objects = _engine->getScene().getObjects();
-    // TODO:
-    // players = getPlayers(objects);
-    // objects2json(players, playersJson);
-    objects2Json(objects, playersJson);
-    objectsJson.put_child("players", playersJson);
-    stringstream ss;
-    json_parser::write_json(ss, objectsJson);
-    socket->send(ss.str().data(), ss.str().length(), uWS::TEXT);
-}
-
-void WsServer::processSourceExecution(uWS::WebSocket<SERVER>* socket, ptree& json)
-{
-    /* TODO: Engine::tryCompileCode(socket)
-     * {
-     *      if (!compiled)
-     *          socket->send("compile error")
-     * }
-    */
+    string nick, code;
+    try
+    {
+        code = json.get<string>("sourceCode");
+        nick = json.get<string>("nickname");
+    }
+    catch (exception e)
+    {
+        log("Invalid source code JSON");
+        return;
+    }
+    log(string("Source code from ") + socket->getAddress().family + socket->getAddress().address +
+        " (" + nick + ") ", true);
+    log(code);
+    _engine->pushPendingPlayer(nick, code);
 }
 
 WsServer::messageType WsServer::getMessageType(ptree& message)
@@ -182,12 +202,12 @@ WsServer::messageType WsServer::getMessageType(ptree& message)
     {
         return messageType::unknown;
     }
-    if (messageTypeString == "getCharacters")
-        return messageType::characters;
+    if (messageTypeString == "sourceCode")
+        return messageType::sourceCode;
     return messageType::unknown;
 }
 
-void WsServer::objects2Json(vector<GameObject*>& objects, ptree& pt)
+void WsServer::objects2Json(const vector<GameObject*>& objects, ptree& pt)
 {
     for (int i = 0; i < objects.size(); ++i)
     {

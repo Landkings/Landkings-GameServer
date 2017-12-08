@@ -2,7 +2,9 @@
 #include <sstream>
 #include <list>
 #include <vector>
+#include <map>
 #include <fstream>
+#include <mutex>
 
 #include <boost/property_tree/ptree.hpp>
 
@@ -26,19 +28,19 @@ private:
     uWS::Hub _hub;
     std::ofstream _log;
 
-
     enum class messageType
     {
-        unknown, source, characters,
+        unknown, sourceCode
     };
 
     void log(std::string msg, bool inBuffer = false);
     messageType getMessageType(boost::property_tree::ptree& message);
-    void objects2Json(std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
+    void objects2Json(const std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
     void runHubLoop(uint16_t port);
 
-    void processCharactersQuery(uWS::WebSocket<uWS::SERVER>* socket);
-    void processSourceExecution(uWS::WebSocket<uWS::SERVER>* socket, boost::property_tree::ptree& json);
+    std::string createObjectsMessage();
+    void objectsMessageSending();
+    void processPlayerSource(uWS::WebSocket<uWS::SERVER>* socket, boost::property_tree::ptree& json);
 
 
     void onConnection(uWS::WebSocket<uWS::SERVER>* socket, uWS::HttpRequest request);

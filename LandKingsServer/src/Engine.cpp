@@ -4,7 +4,7 @@
 
 static constexpr uint16_t defaultServerPort = 19999;
 
-Engine::Engine::Engine() {}
+Engine::Engine::Engine() : wsServer(this) {}
 
 void Engine::Engine::run() {
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
@@ -18,8 +18,7 @@ void Engine::Engine::run() {
     bool serverRunning = true;
     std::thread([this](bool& running)
     {
-        WsServer server(this);
-        running = server.start(defaultServerPort);
+        running = wsServer.start(defaultServerPort);
     },
     std::ref(serverRunning)).detach();
 
@@ -35,17 +34,26 @@ void Engine::Engine::run() {
 
     //std::this_thread::sleep_for(std::chrono::seconds(10));
 
- 	while (true) {
+    while (true)
+    {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
         //previous = xcurrent;
         //lag += elapsed;
+
+
+        // ***
+        waitForMutex(sceneMutex, std::chrono::microseconds(1));
+        addPendingPlayers();
+        // ***
+
         //while (lag >= 30) {
             update();
         //    lag -= 30;
         //}
 
         //scene.print();
+        sceneMutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
@@ -54,7 +62,33 @@ void Engine::Engine::update() {
     scene.update();
 }
 
-const Engine::Scene& Engine::Engine::getScene() const
+void Engine::Engine::waitForMutex(std::mutex& m, const std::chrono::microseconds& interval)
 {
-    return scene;
+    while (!m.try_lock())
+        std::this_thread::sleep_for(interval);
+    return;
 }
+
+// ***
+
+void Engine::Engine::pushPendingPlayer(std::string& nickname, std::string& sourceCode)
+{
+    waitForMutex(pendingPlayersMutex);
+    pendingPlayers.push_back(std::pair<std::string, std::string>(nickname, sourceCode));
+    pendingPlayersMutex.unlock();
+}
+
+void Engine::Engine::addPendingPlayers()
+{
+    if (pendingPlayers.size() == 0)
+        return;
+    waitForMutex(pendingPlayersMutex);
+    for (int i = 0; i < pendingPlayers.size(); ++i)
+    {
+        // TODO: add players into the game
+    }
+    pendingPlayers.clear();
+    pendingPlayersMutex.unlock();
+}
+
+// ***
