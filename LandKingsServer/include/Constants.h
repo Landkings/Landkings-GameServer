@@ -8,4 +8,4 @@ namespace Constants {
     const int TILE_WIDTH = 32;
     const int TILE_HEIGHT = 32;
 }
-};
+}
