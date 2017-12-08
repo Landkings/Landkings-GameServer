@@ -4,7 +4,7 @@
 
 static constexpr uint16_t defaultServerPort = 19999;
 
-Engine::Engine::Engine() : wsServer(this) {}
+Engine::Engine::Engine() : wsServer(*this) {}
 
 void Engine::Engine::run() {
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
@@ -36,6 +36,7 @@ void Engine::Engine::run() {
 
     while (true)
     {
+        ready = false;
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
         //previous = xcurrent;
@@ -55,6 +56,9 @@ void Engine::Engine::run() {
         //scene.print();
         sceneMutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        ready = true;
+        while (!wsServer._ready)
+            continue;
     }
 }
 

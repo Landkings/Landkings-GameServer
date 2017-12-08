@@ -30,7 +30,7 @@ private:
     std::mutex sceneMutex;
     std::vector<std::pair<std::string, std::string>> pendingPlayers;
     std::mutex pendingPlayersMutex;
-
+    bool ready;
 };
 
 }

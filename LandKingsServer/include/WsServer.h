@@ -19,22 +19,24 @@ namespace Engine
 
 class WsServer
 {
+    friend class Engine::Engine;
 public:
-    WsServer(Engine::Engine* engine);
+    WsServer(Engine::Engine& engine);
     ~WsServer();
     bool start(uint16_t port);
 private:
-    Engine::Engine* _engine;
+    Engine::Engine& _engine;
+    bool _ready;
     uWS::Hub _hub;
     std::ofstream _log;
 
-    enum class messageType
+    enum class MessageType
     {
         unknown, sourceCode
     };
 
     void log(std::string msg, bool inBuffer = false);
-    messageType getMessageType(boost::property_tree::ptree& message);
+    MessageType getMessageType(boost::property_tree::ptree& message);
     void objects2Json(const std::vector<Engine::GameObject*>& objects, boost::property_tree::ptree& pt);
     void runHubLoop(uint16_t port);
 
