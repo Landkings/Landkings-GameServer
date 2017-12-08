@@ -2,6 +2,7 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <mutex>
 
 #include "Constants.h"
 #include "lua.hpp"
@@ -24,6 +25,7 @@ public:
     void update();
     //void addObject(PGameObject obj);
     void addObject(GameObject *obj);
+    void addPlayer(std::string playerName, std::string luaCode);
     void print();
     void luaReg(lua_State *L);
     const std::vector<GameObject*>& getObjects() const;
@@ -37,12 +39,15 @@ private:
     bool isCollide(const Position firstPos, const HitBox firstHitBox, const Position secondPos, const HitBox secondHitBox);
     bool isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight);
     bool checkSceneCollision(const GameObject *obj, const Position *newPos);
+    void clearCorpses();
+    Position getRandomPosition();
     //std::vector<PGameObject> objects;
     std::vector<GameObject*> objects;
     std::vector<std::vector<Tile*>> tiles;
     int height;
     int width;
     long long time;
+    std::mutex objectsMutex;
     //todo replace
     Tile land;
     Tile wall;

@@ -14,15 +14,15 @@ Scene::Scene() : land(true), wall(false) {
     for (auto& row : tiles) {
         row.resize(width, &land);
     }
-    tiles[8][13] =  &wall;
-    tiles[10][13] =  &wall;
+//    tiles[8][13] =  &wall;
+//    tiles[10][13] =  &wall;
 }
 
 void Scene::move(GameObject *object, const Position &new_pos) {
     if (((Character*)object)->getNextMoveTime() <= time && validPosition(new_pos)) {
-        ((Character*)object)->setNextMoveTime();
+        //((Character*)object)->setNextMoveTime();
         if (!checkSceneCollision(object, &new_pos))
-            object->setPosition(new_pos);
+            ((Character*)object)->move(new_pos);
     }
 }
 
@@ -32,17 +32,29 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    if ((((GameObject*)c1)->getPosition() - ((GameObject*)c2)->getPosition()).abs() > 1.0) {
-        move(c1, c2);
+    Position newPos = ((GameObject*)c1)->getPosition() + findDirection(c1, c2);
+    if (!isCollide(newPos, c1->getHitbox(), c2->getPosition(), c2->getHitbox())) {
+        move(c1, newPos);
     }
-    else if (c2->getHp() > 0) {
-        c2->setHp(std::max(c2->getHp() - c1->getDamage(), 0));
+    else {
+        if (((Character*)c1)->getNextAttackTime() <= time && c2->getHp() > 0) {
+            c1->attack(c2);
+
+            //((Character*)c1)->setNextAttackTime();
+            //c2->setHp(std::max(c2->getHp() - c1->getDamage(), 0));
+        } //Shouldn't be else, since it checks hp after attack
+        if (c2->getHp() <= 0) {
+            c1->setTarget(nullptr);
+        }
     }
 }
 
 void Scene::update() {
+    objectsMutex.lock();
     for (auto& object : objects)
         object->update();
+    clearCorpses();
+    objectsMutex.unlock();
     ++time;
 }
 
@@ -54,9 +66,16 @@ void Scene::addObject(GameObject *obj) {
     objects.push_back(obj);
 }
 
+void Scene::addPlayer(std::string playerName, std::string luaCode) {
+    GameObject *player = new Character(this, luaCode, getRandomPosition());
+    objectsMutex.lock();
+    objects.push_back(player);
+    objectsMutex.unlock();
+}
+
 void Scene::print() {
-    for (auto& object : objects)
-        std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;
+//    for (auto& object : objects)
+//        std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;
 
     std::vector<std::string> sc;
     for (int i = 0; i < 20; ++i) {
@@ -110,7 +129,7 @@ int Scene::getObjects(lua_State *L) {
     lua_newtable(L);
     //std::cout << "Table created" << std::endl;
     int i = 1;
-    for (auto object : Pscene->objects) {
+    for (auto& object : Pscene->objects) {
         //std::cout << i << " added to table" << std::endl;
         //lua_pushinteger(L, i++);
         ((Character*)object)->luaPush(L);
@@ -120,13 +139,11 @@ int Scene::getObjects(lua_State *L) {
 }
 
 Position Scene::findDirection(GameObject *from, GameObject *to) {
-    Position fromPos = from->getPosition();
-    Position toPos = to->getPosition();
     int diff;
-    if ((diff = toPos.getX() - fromPos.getX())) {
+    if ((diff = to->getX() - from->getX())) {
         return Position(diff/abs(diff), 0);
     }
-    else if ((diff = toPos.getY() - fromPos.getY())) {
+    else if ((diff = to->getY() - from->getY())) {
         return Position(0, diff/abs(diff));
     }
 }
@@ -160,6 +177,21 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) {
     return false;
 }
 
+void Scene::clearCorpses() {
+    for (int i = objects.size() - 1; i >= 0; --i) {
+        if (((Character*)(objects[i]))->getHp() <= 0) {
+            delete ((Character*)(objects[i]));
+            objects.erase(objects.begin() + i);
+        }
+    }
+}
+
+Position Scene::getRandomPosition() {
+    return Position(100, 100); //TODO: add randomness
+}
+
 const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }
+
+
