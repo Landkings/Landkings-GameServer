@@ -71,6 +71,7 @@ bool WsServer::start(uint16_t port)
             _ready = true;
             while (!_engine.ready)
                 continue;
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }).detach();
     runHubLoop(port);
