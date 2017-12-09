@@ -32,7 +32,7 @@ private:
 
     enum class MessageType
     {
-        unknown, sourceCode
+        unknown, getObjects, sourceCode
     };
 
     void log(std::string msg, bool inBuffer = false);
@@ -41,10 +41,9 @@ private:
     void runHubLoop(uint16_t port);
 
     std::string createObjectsMessage();
-    void sendObjects();
     void sendMap(uWS::WebSocket<uWS::SERVER>* socket);
     void processPlayerSource(uWS::WebSocket<uWS::SERVER>* socket, boost::property_tree::ptree& json);
-
+    void processObjectsQuery(uWS::WebSocket<uWS::SERVER>* socket);
 
     void onConnection(uWS::WebSocket<uWS::SERVER>* socket, uWS::HttpRequest request);
     void onDisconnection(uWS::WebSocket<uWS::SERVER>* socket, int code, char* message, size_t length);

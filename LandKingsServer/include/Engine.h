@@ -21,7 +21,7 @@ public:
 private:
     void update();
 
-    void waitForMutex(std::mutex&m, const std::chrono::microseconds& interval = std::chrono::microseconds(10));
+    void waitForMutex(std::mutex& m, const std::chrono::microseconds& interval = std::chrono::microseconds(10));
     void pushPendingPlayer(std::string& nickname, std::string& sourceCode);
     void addPendingPlayers();
 

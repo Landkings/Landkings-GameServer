@@ -62,28 +62,8 @@ bool WsServer::start(uint16_t port)
         log("Cant listen port: " + to_string(port));
         return false;
     }
-    thread([this]()
-    {
-        while (true) // WsServer custom loop
-        {
-            _ready = false;
-            sendObjects();
-            _ready = true;
-            while (!_engine.ready)
-                continue;
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-    }).detach();
     runHubLoop(port);
     return true;
-}
-
-void WsServer::sendObjects()
-{
-    _engine.waitForMutex(_engine.sceneMutex);
-    string objectsMessage = createObjectsMessage();
-    _hub.Group<SERVER>::broadcast(objectsMessage.data(), objectsMessage.length(), TEXT);
-    _engine.sceneMutex.unlock();
 }
 
 string WsServer::createObjectsMessage()
@@ -130,6 +110,7 @@ void WsServer::sendMap(uWS::WebSocket<SERVER>* socket)
     stringstream ss;
     json_parser::write_json(ss, result);
     socket->send(ss.str().data(), ss.str().length(), TEXT);
+    _engine.sceneMutex.unlock();
 }
 
 void WsServer::onDisconnection(uWS::WebSocket<SERVER>* socket, int code, char* message, size_t length)
@@ -158,6 +139,9 @@ void WsServer::onMessage(uWS::WebSocket<SERVER>* socket, char* message, size_t l
     {
         case MessageType::sourceCode:
             processPlayerSource(socket, incomingJson);
+            return;
+        case MessageType::getObjects:
+            processObjectsQuery(socket);
             return;
         default:
             socket->send("Not implemented");
@@ -222,6 +206,12 @@ void WsServer::processPlayerSource(uWS::WebSocket<SERVER>* socket, ptree& json)
     _engine.pushPendingPlayer(nickname, code);
 }
 
+void WsServer::processObjectsQuery(uWS::WebSocket<uWS::SERVER>* socket)
+{
+    string objMes = createObjectsMessage();
+    socket->send(objMes.data(), objMes.length(), TEXT);
+}
+
 WsServer::MessageType WsServer::getMessageType(ptree& message)
 {
     string messageTypeString;
@@ -235,6 +225,8 @@ WsServer::MessageType WsServer::getMessageType(ptree& message)
     }
     if (messageTypeString == "sourceCode")
         return MessageType::sourceCode;
+    if (messageTypeString == "getObjects")
+        return MessageType::getObjects;
     return MessageType::unknown;
 }
 
