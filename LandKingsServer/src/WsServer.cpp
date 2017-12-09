@@ -114,6 +114,7 @@ void WsServer::sendMap(uWS::WebSocket<SERVER>* socket)
     const TileMap& tileMap = _engine.scene.getTileMap();
     ptree result, mapJson;
     int height = tileMap.size(), width = tileMap[0].size();
+    result.put<string>("messageType", "map");
     result.put<int>("width", width);
     result.put<int>("height", height);
     for (int i = 0; i < height; ++i)
