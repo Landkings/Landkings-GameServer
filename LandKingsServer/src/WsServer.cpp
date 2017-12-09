@@ -67,17 +67,18 @@ bool WsServer::start(uint16_t port)
         while (true) // WsServer custom loop
         {
             _ready = false;
-            objectsMessageSending();
+            sendObjects();
             _ready = true;
             while (!_engine.ready)
                 continue;
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
     }).detach();
     runHubLoop(port);
     return true;
 }
 
-void WsServer::objectsMessageSending()
+void WsServer::sendObjects()
 {
     _engine.waitForMutex(_engine.sceneMutex);
     string objectsMessage = createObjectsMessage();
@@ -94,6 +95,7 @@ string WsServer::createObjectsMessage()
     // players = getPlayers(objects);
     // objects2json(players, playersJson);
     objects2Json(objects, playersJson);
+    objectsJson.put<string>("messageType", "objects");
     objectsJson.put_child("players", playersJson);
     stringstream ss;
     json_parser::write_json(ss, objectsJson);
@@ -103,6 +105,30 @@ string WsServer::createObjectsMessage()
 void WsServer::onConnection(WebSocket<SERVER>* socket, HttpRequest request)
 {
     log(string("Connected: ") + socket->getAddress().family + socket->getAddress().address);
+    sendMap(socket);
+}
+
+void WsServer::sendMap(uWS::WebSocket<SERVER>* socket)
+{
+    _engine.waitForMutex(_engine.sceneMutex);
+    const TileMap& tileMap = _engine.scene.getTileMap();
+    ptree result, mapJson;
+    int height = tileMap.size(), width = tileMap[0].size();
+    result.put<int>("width", width);
+    result.put<int>("height", height);
+    for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+        {
+            ptree val;
+            val.put("", tileMap[i][j]->getIdx());
+            mapJson.push_back(make_pair("", val));
+        }
+    }
+    result.put_child("map", mapJson);
+    stringstream ss;
+    json_parser::write_json(ss, result);
+    socket->send(ss.str().data(), ss.str().length(), TEXT);
 }
 
 void WsServer::onDisconnection(uWS::WebSocket<SERVER>* socket, int code, char* message, size_t length)

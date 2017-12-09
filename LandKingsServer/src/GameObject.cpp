@@ -4,53 +4,20 @@ using namespace Engine;
 
 // public methods
 
-GameObject::GameObject(Scene *scene, Position pos, std::string tmpLuaName, HitBox hbox) : scene(scene), position(pos), tmpLuaName(tmpLuaName), hbox(hbox) {}
+GameObject::GameObject(Scene *scene, Position pos, HitBox hbox) : scene(scene), position(pos), hbox(hbox) {}
 
 Character::Character(Scene *scene, Position pos, std::string tmpLuaName, HitBox hbox) :
-    GameObject(scene, pos, tmpLuaName, hbox),
-    target(nullptr),
-    action(Action::Empty),
-    direction(Direction::Unknown){
-    hitPoints = 100;
-    damage = 10;    //TODO: replace with constants
-    speed = 5;
-    nextMoveTime = 0;
-    moveCooldown = 16;
-    L = luaL_newstate();
-    *static_cast<Character**>(lua_getextraspace(L)) = this;
-
-    lua_pushglobaltable(L); //TODO: replace global environment with a safe environment
-#define E LUA_ENUM_HELPER
-    // Add Action Enum
-    lua_pushstring(L, "Action");
-    lua_newtable(L);
-    ACTION
-    lua_settable(L, -3);
-
-    //Add Direction Enum
-    lua_pushstring(L, "Direction");
-    lua_newtable(L);
-    DIRECTION
-    lua_settable(L, -3);
-#undef E
-    //lua_pop(L, 1);
-
-    luaL_openlibs(L);
-    //lua_pushglobaltable(L); //TODO: replace with a safe environment
-    luaL_Reg characterMethods[] = {
-        "setAction",    dispatch<Character, &Character::setAction>,
-        "getAction",    dispatch<Character, &Character::getAction>,
-        "setDirection", dispatch<Character, &Character::setDirection>,
-        "getDirection", dispatch<Character, &Character::getDirection>,
-        "setTarget",    dispatch<Character, &Character::setTarget>,
-        "getTarget",    dispatch<Character, &Character::getTarget>,
-        "getPosition",  dispatch<Character, &Character::getPosition>,
-        "write",        dispatch<Character, &Character::write>,
-        nullptr, nullptr
-    };
-    luaL_setfuncs(L, characterMethods, 0);
-    scene->luaReg(L);
+    GameObject(scene, pos, hbox) {
+    init();
     if (luaL_loadfile(L, tmpLuaName.c_str()) || lua_pcall(L, 0, 0, 0)) {
+        printf("Error loading script\n");
+    }
+}
+
+Character::Character(Scene *scene, std::string luaCode, Position pos) :
+    GameObject(scene, pos, HitBox(20, 20)) {
+    init();
+    if (luaL_loadstring(L, luaCode.c_str()) || lua_pcall(L, 0, 0, 0)) {
         printf("Error loading script\n");
     }
 }
@@ -98,7 +65,7 @@ void Character::luaPush(lua_State *state) {
         lua_setfield(state, -2, "__index");
 
         luaL_Reg characterMethods[] = {
-            "getPosition", dispatch<Character, &Character::getObjectPosition>,
+            "getPosition", dispatch<Character, &Character::luaGetObjectPosition>,
             "test",        dispatch<Character, &Character::test>,
             nullptr, nullptr
         };
@@ -107,33 +74,71 @@ void Character::luaPush(lua_State *state) {
     lua_setmetatable(state, -2);
 }
 
+void Character::attack(Character *target) {
+    switch (attackType) {
+    case AttackType::Fast:
+        target->takeDamage(damage);
+        nextAttackTime = scene->getTime() + attackCooldown;
+        break;
+    case AttackType::Strong:
+        target->takeDamage(damage * 2);
+        nextAttackTime = scene->getTime() + attackCooldown * 2;
+        break;
+    }
+}
+
+void Character::move(Position newPos) {
+    position = newPos;
+    switch(movementType) {
+    case MovementType::Sprint:
+       nextMoveTime = scene->getTime() + moveCooldown / 2;
+       break;
+    case MovementType::Default:
+        nextMoveTime = scene->getTime() + moveCooldown;
+       break;
+    }
+    //setNextMoveTime();
+}
+
+void Character::takeDamage(int amount) {
+    if (amount > 0)
+        hitPoints -= amount;
+}
+
+Character::~Character() {
+    lua_close(L);
+}
+
 void Character::attack() {
-    scene->attack(this, (Character*)target);
+    if (target)
+        scene->attack(this, (Character*)target);
 }
 
 // private methods
 
-int Character::setAction(lua_State *state) {
+int Character::luaSetAction(lua_State *state) {
     action = (Action)luaL_checkinteger(state, 1);
     return 0;
 }
 
-int Character::getAction(lua_State *state) {
-    lua_pushstring(state, actionStrings[action].c_str());
+int Character::luaGetAction(lua_State *state) {
+    //lua_pushstring(state, actionStrings[action].c_str());
+    lua_pushinteger(state, (int)action);
     return 1;
 }
 
-int Character::setDirection(lua_State *state) {
+int Character::luaSetDirection(lua_State *state) {
     direction = (Direction)luaL_checkinteger(state, 1);
     return 0;
 }
 
-int Character::getDirection(lua_State *state) {
-    lua_pushstring(state, directionStrings[direction].c_str());
+int Character::luaGetDirection(lua_State *state) {
+    //lua_pushstring(state, directionStrings[direction].c_str());
+    lua_pushinteger(state, (int)direction);
     return 1;
 }
 
-int Character::setTarget(lua_State *state) {
+int Character::luaSetTarget(lua_State *state) {
     Character* Pcharacter = *(Character**)luaL_checkudata(state, 1, "CharacterMetaTable");
     if (Pcharacter != this) {
         target = Pcharacter;
@@ -144,7 +149,7 @@ int Character::setTarget(lua_State *state) {
     return 0;
 }
 
-int Character::getTarget(lua_State *state) {
+int Character::luaGetTarget(lua_State *state) {
     if (target) {
         ((Character*)target)->luaPush(state);
     }
@@ -154,18 +159,111 @@ int Character::getTarget(lua_State *state) {
     return 1;
 }
 
-int Character::getPosition(lua_State *state) {
+int Character::luaGetPosition(lua_State *state) {
     position.luaPush(state);
     return 1;
 }
 
-int Character::getObjectPosition(lua_State *state) {
+int Character::luaGetObjectPosition(lua_State *state) {
     Character* Pcharacter = *(Character**)luaL_checkudata(state, 1, "CharacterMetaTable");
     Pcharacter->position.luaPush(state);
+    return 1;
+}
+
+int Character::luaGetStamina(lua_State *state) {
+    lua_pushinteger(state, stamina);
+    return 1;
+}
+
+int Character::luaGetHp(lua_State *state) {
+    lua_pushinteger(state, hitPoints);
+    return 1;
+}
+
+int Character::luaSetAttackType(lua_State *state) {
+    attackType = (AttackType)luaL_checkinteger(state, 1);
+    return 0;
+}
+
+int Character::luaSetMovementType(lua_State *state) {
+    movementType = (MovementType)luaL_checkinteger(state, 1);
+    return 0;
+}
+
+int Character::luaGetMovementType(lua_State *state) {
+    lua_pushinteger(state, (int)movementType);
     return 1;
 }
 
 int Character::test(lua_State *stata) {
     std::cout << "Function called" << std::endl;
     return 0;
+}
+
+void Character::init() {
+    target = nullptr;
+    action = Action::Empty;
+    direction = Direction::Unknown;
+    attackType = AttackType::Fast;
+    movementType = MovementType::Default;
+    hitPoints = 100;
+    damage = 10;    //TODO: replace with constants
+    speed = 5;
+    nextMoveTime = 0;
+    nextAttackTime = 0;
+    moveCooldown = 16;
+    attackCooldown = 400;
+    stamina = 100;
+
+    L = luaL_newstate();
+    *static_cast<Character**>(lua_getextraspace(L)) = this;
+
+    lua_pushglobaltable(L); //TODO: replace global environment with a safe environment
+#define E LUA_ENUM_HELPER
+    // Add Action Enum
+    lua_pushstring(L, "Action");
+    lua_newtable(L);
+    ACTION
+    lua_settable(L, -3);
+
+    //Add Direction Enum
+    lua_pushstring(L, "Direction");
+    lua_newtable(L);
+    DIRECTION
+    lua_settable(L, -3);
+
+    //Add AttackType Enum
+    lua_pushstring(L, "AttackType");
+    lua_newtable(L);
+    ATTACK_TYPE
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "MovementType");
+    lua_newtable(L);
+    MOVEMENT_TYPE
+    lua_settable(L, -3);
+
+#undef E
+    //lua_pop(L, 1);
+
+    luaL_openlibs(L);
+    //lua_pushglobaltable(L); //TODO: replace with a safe environment
+    luaL_Reg characterMethods[] = {
+        "setAction",       dispatch<Character, &Character::luaSetAction>,
+        "getAction",       dispatch<Character, &Character::luaGetAction>,
+        "setDirection",    dispatch<Character, &Character::luaSetDirection>,
+        "getDirection",    dispatch<Character, &Character::luaGetDirection>,
+        "setTarget",       dispatch<Character, &Character::luaSetTarget>,
+        "getTarget",       dispatch<Character, &Character::luaGetTarget>,
+        "getPosition",     dispatch<Character, &Character::luaGetPosition>,
+        "getStamina",      dispatch<Character, &Character::luaGetStamina>,
+        "getHp",           dispatch<Character, &Character::luaGetHp>,
+        "setAttackType",   dispatch<Character, &Character::luaSetAttackType>,
+        "setMovementType", dispatch<Character, &Character::luaSetMovementType>,
+        "getMovementType", dispatch<Character, &Character::luaGetMovementType>,
+        "write",           dispatch<Character, &Character::write>,
+        nullptr, nullptr
+    };
+    luaL_setfuncs(L, characterMethods, 0);
+    scene->luaReg(L);
 }

@@ -41,7 +41,8 @@ private:
     void runHubLoop(uint16_t port);
 
     std::string createObjectsMessage();
-    void objectsMessageSending();
+    void sendObjects();
+    void sendMap(uWS::WebSocket<uWS::SERVER>* socket);
     void processPlayerSource(uWS::WebSocket<uWS::SERVER>* socket, boost::property_tree::ptree& json);
 
 

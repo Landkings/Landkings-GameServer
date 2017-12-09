@@ -36,7 +36,6 @@ void Engine::Engine::run() {
 
     while (true)
     {
-        ready = false;
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
         //previous = xcurrent;
@@ -56,9 +55,6 @@ void Engine::Engine::run() {
         //scene.print();
         sceneMutex.unlock();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
-        ready = true;
-        while (!wsServer._ready)
-            continue;
     }
 }
 
@@ -89,7 +85,8 @@ void Engine::Engine::addPendingPlayers()
     waitForMutex(pendingPlayersMutex);
     for (int i = 0; i < pendingPlayers.size(); ++i)
     {
-        // TODO: add players into the game
+        scene.addPlayer(pendingPlayers[i].first, pendingPlayers[i].second);
+                        // TODO: add players into the game
     }
     pendingPlayers.clear();
     pendingPlayersMutex.unlock();

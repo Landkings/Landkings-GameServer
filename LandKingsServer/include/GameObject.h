@@ -24,7 +24,14 @@ namespace Engine {
   E(Left, Left) \
   E(Unknown, Unknown) \
 
-/* In the c header file: */
+#define ATTACK_TYPE \
+  E(Fast, Fast) \
+  E(Strong, Strong) \
+
+#define MOVEMENT_TYPE \
+  E(Default, Default) \
+  E(Sprint, Sprint) \
+
 #define E C_ENUM_HELPER
 enum Action {
     ACTION
@@ -33,6 +40,15 @@ enum Action {
 enum Direction {
     DIRECTION
 };
+
+enum AttackType {
+    ATTACK_TYPE
+};
+
+enum MovementType {
+    MOVEMENT_TYPE
+};
+
 #undef E
 
 #define E C_ENUM_TO_STRING_HELPER
@@ -55,7 +71,7 @@ const Position directions[4] = {
 
 class GameObject {
 public:
-    GameObject(Scene* scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox());
+    GameObject(Scene* scene, Position pos = Position(), HitBox hbox = HitBox());
     Position getPosition() const { return position; }
     void setPosition(Position pos) { position = pos; }
     HitBox getHitbox() const { return hbox; }
@@ -69,8 +85,6 @@ public:
 
     virtual bool isPassable() { return false; }
     virtual void update() = 0;
-
-    std::string tmpLuaName;
 protected:
     Position position;
     HitBox hbox;
@@ -81,6 +95,7 @@ protected:
 class Character : public GameObject {
 public:
     Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
+    Character(Scene *scene, std::string luaCode, Position pos = Position());
     void move();
     void attack();
     int write(lua_State *state);
@@ -92,28 +107,46 @@ public:
     void setDirection(const Direction dir) { direction = dir; }
     void setTarget (const GameObject *targ) { target = targ; }
     int getSpeedCooldown() const { return speed; }
-    long long getNextMoveTime() const { return nextMoveTime; }
+    long long getNextMoveTime() const { return nextMoveTime; }    
     void setNextMoveTime();
+    long long getNextAttackTime() const {return nextAttackTime; }
+    //void setNextAttackTime();
     void luaPush(lua_State *state);
+    void attack(Character *target);
+    void move(Position newPos);
+    void takeDamage(int amount);
+    ~Character();
+    std::string tmpLuaName;
 protected:
     //int move(lua_State *state);
-    int setAction(lua_State *state);
-    int getAction(lua_State *state);
-    int setDirection(lua_State *state);
-    int getDirection(lua_State *state);
-    int setTarget(lua_State *state);
-    int getTarget(lua_State *state);
-    int getPosition(lua_State *state);
-    int getObjectPosition(lua_State *state);
+    int luaSetAction(lua_State *state);
+    int luaGetAction(lua_State *state);
+    int luaSetDirection(lua_State *state);
+    int luaGetDirection(lua_State *state);
+    int luaSetTarget(lua_State *state);
+    int luaGetTarget(lua_State *state);
+    int luaGetPosition(lua_State *state);
+    int luaGetObjectPosition(lua_State *state);
+    int luaGetStamina(lua_State *state);
+    int luaGetHp(lua_State *state);
+    int luaSetAttackType(lua_State *state);
+    int luaSetMovementType(lua_State *state);
+    int luaGetMovementType(lua_State *state);
     int test(lua_State *stata);
+    void init();
     Action action;
     Direction direction;
+    AttackType attackType;
+    MovementType movementType;
     const GameObject *target;
     int hitPoints;
     int speed;
     int damage;
-    long long nextMoveTime;
+    int stamina;
+    long long nextMoveTime; //probably should refactor. Either unite cooldown variables or move up them.
+    long long nextAttackTime;
     int moveCooldown;
+    int attackCooldown;
     lua_State *L;
 };
 typedef std::shared_ptr<Character> PCharacter;

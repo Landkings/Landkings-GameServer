@@ -5,9 +5,11 @@ namespace Engine {
 
 class Tile {
 public:
-    Tile(bool passable) : passable(passable) {}
+    Tile(bool passable, int idx) : passable(passable), idx(idx) {}
+    int getIdx() { return idx; }
     bool isPassable() { return passable; }
 private:
+    int idx;
     bool passable;
 };
 
