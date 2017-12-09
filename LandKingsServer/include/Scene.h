@@ -28,6 +28,7 @@ public:
     void addPlayer(std::string playerName, std::string luaCode);
     void print();
     void luaReg(lua_State *L);
+    const std::vector<std::vector<Tile*>> getTileMap() const { return tiles; }
     const std::vector<GameObject*>& getObjects() const;
     long long getTime() const { return time; }
 private:

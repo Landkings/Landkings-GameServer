@@ -6,7 +6,7 @@ using namespace Engine;
 
 //public methods
 
-Scene::Scene() : land(true), wall(false) {
+Scene::Scene() : land(true, 1), wall(false, 2) {
     height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
     width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
     time = 0;
@@ -157,13 +157,10 @@ bool Scene::isCollide(const Position firstPos, const HitBox firstHitBox, const P
 }
 
 bool Scene::isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight) {
-    if (firstPos.getX() < secondPos.getX() + secondWidth &&
-        firstPos.getX() + firstWidth > secondPos.getX() &&
-        firstPos.getY() < secondPos.getY() + secondHeight &&
-        firstPos.getY() + firstHeight > secondPos.getY())  {
-        return true;
-    }
-    return false;
+    return firstPos.getX() < secondPos.getX() + secondWidth &&
+           firstPos.getX() + firstWidth > secondPos.getX() &&
+           firstPos.getY() < secondPos.getY() + secondHeight &&
+           firstPos.getY() + firstHeight > secondPos.getY();
 }
 
 bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) { //TODO AABB tree optimization
