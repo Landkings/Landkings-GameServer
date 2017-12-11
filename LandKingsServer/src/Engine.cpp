@@ -13,6 +13,19 @@ void Engine::Engine::run() {
     auto lag = previous - previous;
     int cnt = 0;
 
+    std::thread([this]()
+    {
+        auto messageHandler = std::bind(&Engine::Engine::onWsMessage, this,
+                                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+        wsHub.onMessage(messageHandler);
+        std::map<std::string, std::string> header;
+        std::getline(std::ifstream("secret.txt"), header["secret"]);
+        wsHub.connect("ws://localhost:19998", nullptr, header);
+        wsHub.run();
+    }).detach();
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
     while (true)
     {
         //auto current = std::chrono::system_clock::now();
@@ -27,8 +40,8 @@ void Engine::Engine::run() {
 
         //scene.print();
 
-
-        // TODO: send objects to WsServer
+        // TODO: wsSocket->send(objects); messageType = "loadObjects"
+        wsSocket->send("{\"messageType\" : \"loadObjects\"}"); // del
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -44,3 +57,14 @@ void Engine::Engine::waitForMutex(std::mutex& m, const std::chrono::microseconds
         std::this_thread::sleep_for(interval);
     return;
 }
+
+// **********
+
+void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
+{
+    wsSocket = socket;
+    // TODO: wsSocket->send(map); messageType = "loadMap"
+    wsSocket->send("{\"messageType\" : \"loadMap\"}"); // del
+}
+
+// **********
