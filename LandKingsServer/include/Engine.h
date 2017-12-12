@@ -6,6 +6,7 @@
 #include <mutex>
 #include <functional>
 #include <fstream>
+#include <atomic>
 
 #include "uWS.h"
 
@@ -33,6 +34,7 @@ private:
 
     uWS::Hub wsHub;
     uWS::WebSocket<uWS::CLIENT>* wsSocket;
+    std::atomic<bool> connected;
 };
 
 }

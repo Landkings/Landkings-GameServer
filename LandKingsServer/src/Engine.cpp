@@ -2,7 +2,9 @@
 
 static constexpr uint16_t defaultWsServerPort = 19998;
 
-Engine::Engine::Engine() {}
+Engine::Engine::Engine() : wsSocket(nullptr) {
+    connected.store(false);
+}
 
 void Engine::Engine::run() {
 //    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
@@ -22,9 +24,20 @@ void Engine::Engine::run() {
         std::getline(std::ifstream("secret.txt"), header["secret"]);
         wsHub.connect("ws://localhost:19998", nullptr, header);
         wsHub.run();
+        connected.store(false);
+        wsSocket = nullptr;
     }).detach();
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    int secondsCounter = 0;
+    while (!connected.load())
+    {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        if (++secondsCounter == 5)
+        {
+            std::cout << "Timeout for connecting" << std::endl;
+            return;
+        }
+    }
 
     while (true)
     {
@@ -41,9 +54,10 @@ void Engine::Engine::run() {
         //scene.print();
 
         // TODO: wsSocket->send(objects); messageType = "loadObjects"
-        wsSocket->send("{\"messageType\" : \"loadObjects\"}"); // del
+        if (connected.load())
+            wsSocket->send("{\"messageType\" : \"loadObjects\"}"); // del
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
 
@@ -65,6 +79,7 @@ void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* mess
     wsSocket = socket;
     // TODO: wsSocket->send(map); messageType = "loadMap"
     wsSocket->send("{\"messageType\" : \"loadMap\"}"); // del
+    connected.store(true);
 }
 
 // **********
