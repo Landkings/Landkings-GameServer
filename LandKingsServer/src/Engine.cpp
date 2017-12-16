@@ -15,30 +15,11 @@ void Engine::Engine::run() {
     auto lag = previous - previous;
     int cnt = 0;
 
-    std::thread([this]()
+    if (!messageServerConnection())
     {
-        auto messageHandler = std::bind(&Engine::Engine::onWsMessage, this,
-                                    std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
-        wsHub.onMessage(messageHandler);
-        std::map<std::string, std::string> header;
-        std::getline(std::ifstream("secret.txt"), header["secret"]);
-        wsHub.connect("ws://localhost:19998", nullptr, header);
-        wsHub.run();
-        connected.store(false);
-        wsSocket = nullptr;
-    }).detach();
-
-    int secondsCounter = 0;
-    while (!connected.load())
-    {
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        if (++secondsCounter == 5)
-        {
-            std::cout << "Timeout for connecting" << std::endl;
-            return;
-        }
+        std::cout << "Timeout for connection" << std::endl;
+        return;
     }
-
     while (true)
     {
         //auto current = std::chrono::system_clock::now();
@@ -56,7 +37,14 @@ void Engine::Engine::run() {
         // TODO: wsSocket->send(objects); messageType = "loadObjects"
         if (connected.load())
             wsSocket->send("{\"messageType\" : \"loadObjects\"}"); // del
-
+        else
+        {
+            delete wsHub;
+            if (messageServerConnection())
+                continue;
+            std::cout << "Timeout for connection" << std::endl;
+            return;
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
 }
@@ -65,17 +53,58 @@ void Engine::Engine::update() {
     scene.update();
 }
 
-void Engine::Engine::waitForMutex(std::mutex& m, const std::chrono::microseconds& interval)
-{
-    while (!m.try_lock())
-        std::this_thread::sleep_for(interval);
-    return;
-}
 
 // **********
 
-void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
+
+bool Engine::Engine::messageServerConnection()
 {
+    std::atomic<bool> timeout, stopTimer;
+    timeout = false; stopTimer = false;
+    std::thread([this, &timeout, &stopTimer]()
+    {
+        int secondsCounter = 0;
+        while (!connected.load() && !stopTimer.load())
+        {
+            std::cout << 10 - secondsCounter << std::endl;
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            if (++secondsCounter == 10)
+            {
+                timeout.store(true);
+                return;
+            }
+        }
+    }).detach();
+    while (true)
+    {
+        std::atomic<bool> threadTerminated;
+        threadTerminated = false;
+        std::thread([this, &threadTerminated]()
+        {
+            auto messageHandler = std::bind(&Engine::Engine::onWsMessage, this,
+                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+            wsHub = new uWS::Hub();
+            wsHub->onMessage(messageHandler);
+            std::map<std::string, std::string> header;
+            std::getline(std::ifstream("secret.txt"), header["secret"]);
+            wsHub->connect("ws://localhost:19998", nullptr, header);
+            wsHub->run();
+            connected.store(false);
+            threadTerminated.store(true);
+        }).detach();
+        while (!threadTerminated.load() && !connected.load() && !timeout.load())
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (connected.load())
+        {
+            stopTimer.store(true);
+            return true;
+        }
+        if (timeout.load())
+            return false;
+    }
+}
+
+void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode) {
     wsSocket = socket;
     // TODO: wsSocket->send(map); messageType = "loadMap"
     wsSocket->send("{\"messageType\" : \"loadMap\"}"); // del

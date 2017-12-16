@@ -25,14 +25,13 @@ public:
 private:
     void update();
 
-    void waitForMutex(std::mutex& m, const std::chrono::microseconds& interval = std::chrono::microseconds(10));
-
     Scene scene;
 
     // ***************
     void onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode);
+    bool messageServerConnection();
 
-    uWS::Hub wsHub;
+    uWS::Hub* wsHub;
     uWS::WebSocket<uWS::CLIENT>* wsSocket;
     std::atomic<bool> connected;
 };
