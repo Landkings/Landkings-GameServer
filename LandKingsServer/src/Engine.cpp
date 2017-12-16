@@ -56,11 +56,16 @@ void Engine::Engine::update() {
 
 // **********
 
+using namespace std;
+using namespace uWS;
+using namespace boost::property_tree;
+
 
 bool Engine::Engine::messageServerConnection()
 {
     std::atomic<bool> timeout, stopTimer;
     timeout = false; stopTimer = false;
+    std::cout << "Try connect to message server" << std::endl;
     std::thread([this, &timeout, &stopTimer]()
     {
         int secondsCounter = 0;
@@ -104,11 +109,101 @@ bool Engine::Engine::messageServerConnection()
     }
 }
 
-void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode) {
+void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
+{
+    std::cout << "Message: " << std::string(message).substr(0, length) << std::endl;
+    ptree pt;
+    if (!ptreeFromString(std::string(message, length), pt))
+    {
+        // something
+        return;
+    }
     wsSocket = socket;
+    processMessage(pt);
+}
+
+void Engine::Engine::processMessage(const ptree& message)
+{
+    MessageType t = getMessageType(message);
+    switch (t)
+    {
+        case MessageType::acceptConnection:
+            processAcceptConnection(message);
+            return;
+        case MessageType::newPlayer:
+            processNewPlayer(message);
+            return;
+        case MessageType::unknown:
+            processUnknown(message);
+            return;
+    }
+}
+
+void Engine::Engine::processAcceptConnection(const ptree& message)
+{
+    connected.store(true);
     // TODO: wsSocket->send(map); messageType = "loadMap"
     wsSocket->send("{\"messageType\" : \"loadMap\"}"); // del
-    connected.store(true);
+}
+
+void Engine::Engine::processNewPlayer(const ptree& message)
+{
+    string src, nick;
+    try
+    {
+        src = message.get<string>("sourceCode");
+        nick = message.get<string>("nickname");
+    }
+    catch (...)
+    {
+        // TODO: something
+    }
+    // TODO: add into the game
+}
+
+void Engine::Engine::processUnknown(const ptree& message)
+{
+
+}
+
+Engine::Engine::MessageType Engine::Engine::getMessageType(const ptree& message) const
+{
+    std::string messageType;
+    try
+    {
+        messageType = message.get<std::string>("messageType");
+    }
+    catch (...)
+    {
+        return MessageType::unknown;
+    }
+    if (messageType == "acceptConnection")
+        return MessageType::acceptConnection;
+    if (messageType == "newPlayer")
+        return MessageType::newPlayer;
+    return MessageType::unknown;
+}
+
+bool Engine::Engine::ptreeFromString(const std::string& s, ptree& output)
+{
+    stringstream ss;
+    ss << s;
+    try
+    {
+        json_parser::read_json(ss, output);
+    }
+    catch (...)
+    {
+        return false;
+    }
+    return true;
+}
+
+void Engine::Engine::stringFromPtree(const ptree& pt, std::string& output)
+{
+    stringstream ss;
+    json_parser::write_json(ss, pt);
+    output = ss.str();
 }
 
 // **********
