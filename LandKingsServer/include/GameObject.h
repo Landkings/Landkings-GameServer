@@ -71,7 +71,7 @@ const Position directions[4] = {
 
 class GameObject {
 public:
-    GameObject(Scene* scene, Position pos = Position(), HitBox hbox = HitBox());
+    GameObject(Scene* scene, Position pos = Position(), std::string name = "", HitBox hbox = HitBox());
     Position getPosition() const { return position; }
     void setPosition(Position pos) { position = pos; }
     HitBox getHitbox() const { return hbox; }
@@ -81,8 +81,7 @@ public:
     int getY() const { return position.getY(); }
     int getWidth() const { return hbox.getWidth(); }
     int getHeight() const { return hbox.getHeight(); }
-    //std::string getID(); //TODO: make this function
-
+    std::string getID() const { return name; }
     virtual bool isPassable() { return false; }
     virtual void update() = 0;
 protected:
@@ -95,7 +94,7 @@ protected:
 class Character : public GameObject {
 public:
     Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
-    Character(Scene *scene, std::string luaCode, Position pos = Position());
+    Character(Scene *scene, std::string luaCode, std::string name, Position pos = Position());
     void move();
     void attack();
     int write(lua_State *state);
@@ -132,6 +131,7 @@ protected:
     int luaSetAttackType(lua_State *state);
     int luaSetMovementType(lua_State *state);
     int luaGetMovementType(lua_State *state);
+    int luaGetMe(lua_State *state);
     int test(lua_State *stata);
     void init();
     Action action;

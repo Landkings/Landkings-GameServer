@@ -3,6 +3,7 @@
 #include <iomanip>
 
 using namespace Engine;
+using namespace boost::property_tree;
 
 //public methods
 
@@ -67,7 +68,16 @@ void Scene::addObject(GameObject *obj) {
 }
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
-    GameObject *player = new Character(this, luaCode, getRandomPosition());
+    GameObject *player;
+    if (players.find(playerName) == players.end()) {
+        player = new Character(this, luaCode, playerName, getRandomPosition());
+        players.insert(playerName);
+    }
+    else {
+        objectsMutex.lock();
+        player = getPlayer(playerName);
+        objectsMutex.unlock();
+    }
     objectsMutex.lock();
     objects.push_back(player);
     objectsMutex.unlock();
@@ -174,6 +184,15 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) {
     return false;
 }
 
+GameObject *Scene::getPlayer(std::string &playerName) {
+    for (auto& obj: objects) {
+        if (obj->getName() == playerName) {
+            return obj;
+        }
+    }
+    return nullptr;
+}
+
 void Scene::clearCorpses() {
     for (int i = objects.size() - 1; i >= 0; --i) {
         if (((Character*)(objects[i]))->getHp() <= 0) {
@@ -189,6 +208,47 @@ Position Scene::getRandomPosition() {
 
 const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
+}
+
+std::string Scene::getObjectsJSON() {
+    ptree objectsJson;
+    ptree playersJson;
+    objectsMutex.lock();    
+    for (int i = 0; i < objects.size(); ++i) {
+        ptree ptObject;
+        ptObject.put("x", objects[i]->getX());
+        ptObject.put("y", objects[i]->getY());
+        playersJson.push_back(make_pair("", ptObject));
+        // TODO: playersJson.put_child(object->getID(), ptObject);
+    }
+    objectsMutex.unlock();
+    objectsJson.put<std::string>("messageType", "loadObjects");
+    objectsJson.put_child("players", playersJson);
+    std::stringstream ss;
+    json_parser::write_json(ss, objectsJson);
+    return ss.str();
+}
+
+std::string Scene::getTileMapJSON() {
+    //engine.waitForMutex(_engine.sceneMutex);
+    ptree result, mapJson;
+    int height = tiles.size(), width = tiles[0].size();
+    result.put<std::string>("messageType", "loadMap");
+    result.put<int>("width", width);
+    result.put<int>("height", height);
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            ptree val;
+            val.put("", tiles[i][j]->getIdx());
+            mapJson.push_back(make_pair("", val));
+        }
+    }
+    result.put_child("tileMap", mapJson);
+    std::stringstream ss;
+    json_parser::write_json(ss, result);
+    return ss.str();
+    //socket->send(ss.str().data(), ss.str().length(), TEXT);
+    //_engine.sceneMutex.unlock();
 }
 
 

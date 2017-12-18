@@ -4,18 +4,18 @@ using namespace Engine;
 
 // public methods
 
-GameObject::GameObject(Scene *scene, Position pos, HitBox hbox) : scene(scene), position(pos), hbox(hbox) {}
+GameObject::GameObject(Scene *scene, Position pos, std::string name, HitBox hbox) : scene(scene), position(pos), hbox(hbox), name(name) {}
 
 Character::Character(Scene *scene, Position pos, std::string tmpLuaName, HitBox hbox) :
-    GameObject(scene, pos, hbox) {
+    GameObject(scene, pos, "", hbox) {
     init();
     if (luaL_loadfile(L, tmpLuaName.c_str()) || lua_pcall(L, 0, 0, 0)) {
         printf("Error loading script\n");
     }
 }
 
-Character::Character(Scene *scene, std::string luaCode, Position pos) :
-    GameObject(scene, pos, HitBox(20, 20)) {
+Character::Character(Scene *scene, std::string luaCode, std::string name, Position pos) :
+    GameObject(scene, pos, name, HitBox(20, 20)) {
     init();
     if (luaL_loadstring(L, luaCode.c_str()) || lua_pcall(L, 0, 0, 0)) {
         printf("Error loading script\n");
@@ -195,6 +195,11 @@ int Character::luaGetMovementType(lua_State *state) {
     return 1;
 }
 
+int Character::luaGetMe(lua_State *state) {
+    this->luaPush(state);
+    return 1;
+}
+
 int Character::test(lua_State *stata) {
     std::cout << "Function called" << std::endl;
     return 0;
@@ -261,6 +266,7 @@ void Character::init() {
         "setAttackType",   dispatch<Character, &Character::luaSetAttackType>,
         "setMovementType", dispatch<Character, &Character::luaSetMovementType>,
         "getMovementType", dispatch<Character, &Character::luaGetMovementType>,
+        "getMe",           dispatch<Character, &Character::luaGetMe>,
         "write",           dispatch<Character, &Character::write>,
         nullptr, nullptr
     };

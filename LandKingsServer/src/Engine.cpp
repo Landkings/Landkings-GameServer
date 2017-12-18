@@ -7,10 +7,6 @@ Engine::Engine::Engine() : wsSocket(nullptr) {
 }
 
 void Engine::Engine::run() {
-//    scene.addObject((PGameObject)(new Character(&scene, Position(0, 0), "p1.lua")));
-//    scene.addObject((PGameObject)(new Character(&scene, Position(0, 10), "p2.lua")));
-    scene.addObject(new Character(&scene, Position(250, 245), "p1.lua"));
-    scene.addObject(new Character(&scene, Position(450, 310), "p2.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
@@ -33,10 +29,9 @@ void Engine::Engine::run() {
         //}
 
         //scene.print();
-
-        // TODO: wsSocket->send(objects); messageType = "loadObjects"
+        std::string objectsJSON = scene.getObjectsJSON();
         if (connected.load())
-            wsSocket->send("{\"messageType\" : \"loadObjects\"}"); // del
+            wsSocket->send(objectsJSON.c_str());
         else
         {
             delete wsHub;
@@ -142,8 +137,8 @@ void Engine::Engine::processMessage(const ptree& message)
 void Engine::Engine::processAcceptConnection(const ptree& message)
 {
     connected.store(true);
-    // TODO: wsSocket->send(map); messageType = "loadMap"
-    wsSocket->send("{\"messageType\" : \"loadMap\"}"); // del
+    std::string tileMapJSON = scene.getTileMapJSON();
+    wsSocket->send(tileMapJSON.c_str());
 }
 
 void Engine::Engine::processNewPlayer(const ptree& message)
@@ -158,7 +153,7 @@ void Engine::Engine::processNewPlayer(const ptree& message)
     {
         // TODO: something
     }
-    // TODO: add into the game
+    scene.addPlayer(nick, src);
 }
 
 void Engine::Engine::processUnknown(const ptree& message)

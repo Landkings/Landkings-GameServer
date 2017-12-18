@@ -3,6 +3,9 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include <set>
+
+#include <boost/property_tree/json_parser.hpp>
 
 #include "Constants.h"
 #include "lua.hpp"
@@ -32,6 +35,8 @@ public:
     const TileMap& getTileMap() const { return tiles; }
     const std::vector<GameObject*>& getObjects() const;
     long long getTime() const { return time; }
+    std::string getObjectsJSON();
+    std::string getTileMapJSON();
 private:
     bool validPosition(const Position &pos);
     //int test(lua_State *L);
@@ -41,10 +46,12 @@ private:
     bool isCollide(const Position firstPos, const HitBox firstHitBox, const Position secondPos, const HitBox secondHitBox);
     bool isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight);
     bool checkSceneCollision(const GameObject *obj, const Position *newPos);
+    GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
     Position getRandomPosition();
     //std::vector<PGameObject> objects;
     std::vector<GameObject*> objects;
+    std::set<std::string> players;
     TileMap tiles;
     int height;
     int width;
