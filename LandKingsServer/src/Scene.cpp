@@ -190,6 +190,7 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 void Scene::clearCorpses() {
     for (int i = objects.size() - 1; i >= 0; --i) {
         if (((Character*)(objects[i]))->getHp() <= 0) {
+            players.erase((Character*)(objects[i])->getID()); //comment to respawn
             delete ((Character*)(objects[i]));
             objects.erase(objects.begin() + i);
         }
