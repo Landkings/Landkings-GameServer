@@ -15,6 +15,7 @@ namespace Engine {
 #define ACTION \
   E(Move, Move) \
   E(Attack, Attack) \
+  E(Block, Block) \
   E(Empty, Empty) \
 
 #define DIRECTION \
@@ -73,15 +74,15 @@ class GameObject {
 public:
     GameObject(Scene* scene, Position pos = Position(), std::string name = "", HitBox hbox = HitBox());
     Position getPosition() const { return position; }
-    void setPosition(Position pos) { position = pos; }
-    HitBox getHitbox() const { return hbox; }
-    void setHitbox(HitBox& hitbox) { hbox = hitbox; }
-    std::string getName() { return name; }
-    int getX() const { return position.getX(); }
-    int getY() const { return position.getY(); }
-    int getWidth() const { return hbox.getWidth(); }
-    int getHeight() const { return hbox.getHeight(); }
-    std::string getID() const { return name; }
+    virtual void setPosition(Position pos) { position = pos; }
+    virtual HitBox getHitbox() const { return hbox; }
+    virtual void setHitbox(HitBox& hitbox) { hbox = hitbox; }
+    virtual std::string getName() { return name; }
+    virtual int getX() const { return position.getX(); }
+    virtual int getY() const { return position.getY(); }
+    virtual int getWidth() const { return hbox.getWidth(); }
+    virtual int getHeight() const { return hbox.getHeight(); }
+    virtual std::string getID() const { return name; }
     virtual bool isPassable() { return false; }
     virtual void update() = 0;
 protected:
@@ -101,6 +102,7 @@ public:
     void update() override;
     int getSpeed() const { return speed; }
     int getHp() const { return hitPoints; }
+    int getStamina() const { return stamina; }
     void setHp(const int hp) { hitPoints = hp; }
     int getDamage() const { return damage; }
     void setDirection(const Direction dir) { direction = dir; }
@@ -114,6 +116,12 @@ public:
     void attack(Character *target);
     void move(Position newPos);
     void takeDamage(int amount);
+    void loadLuaCode(std::string luaCode);
+    bool isBlocking() const { return action == Action::Block; }
+    AttackType getBlockingType() const { return attackType; } //TODO: change
+    void loseStamina(int amount);
+    void gainStamina(int amount);
+    void gainHp(int amount);
     ~Character();
     std::string tmpLuaName;
 protected:
@@ -134,15 +142,21 @@ protected:
     int luaGetMe(lua_State *state);
     int test(lua_State *stata);
     void init();
+    void closeLuaState();
+    void initLuaState();
+    void block();
     Action action;
     Direction direction;
     AttackType attackType;
     MovementType movementType;
     const GameObject *target;
     int hitPoints;
+    int maxHitPoints;
     int speed;
     int damage;
     int stamina;
+    int maxStamina;
+    int attackRange;
     long long nextMoveTime; //probably should refactor. Either unite cooldown variables or move up them.
     long long nextAttackTime;
     int moveCooldown;

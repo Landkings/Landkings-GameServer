@@ -7,11 +7,12 @@
 #include <functional>
 #include <fstream>
 #include <atomic>
+#include <string>
 
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
-#include "uWS.h"
+#include <uWS/uWS.h>
 
 #include "Scene.h"
 #include "GameObject.h"

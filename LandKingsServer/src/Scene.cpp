@@ -33,16 +33,13 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    Position newPos = ((GameObject*)c1)->getPosition() + findDirection(c1, c2);
+    Position newPos = c1->getPosition() + findDirection(c1, c2);
     if (!isCollide(newPos, c1->getHitbox(), c2->getPosition(), c2->getHitbox())) {
         move(c1, newPos);
     }
     else {
-        if (((Character*)c1)->getNextAttackTime() <= time && c2->getHp() > 0) {
+        if (c1->getNextAttackTime() <= time && c2->getHp() > 0) {
             c1->attack(c2);
-
-            //((Character*)c1)->setNextAttackTime();
-            //c2->setHp(std::max(c2->getHp() - c1->getDamage(), 0));
         } //Shouldn't be else, since it checks hp after attack
         if (c2->getHp() <= 0) {
             c1->setTarget(nullptr);
@@ -52,16 +49,13 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
-    for (auto& object : objects)
+    for (auto& object : objects) {
         object->update();
+    }
     clearCorpses();
     objectsMutex.unlock();
     ++time;
 }
-
-//void Scene::addObject(PGameObject obj) {
-//    objects.push_back(obj);
-//}
 
 void Scene::addObject(GameObject *obj) {
     objects.push_back(obj);
@@ -69,17 +63,17 @@ void Scene::addObject(GameObject *obj) {
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     GameObject *player;
+    objectsMutex.lock();
     if (players.find(playerName) == players.end()) {
         player = new Character(this, luaCode, playerName, getRandomPosition());
         players.insert(playerName);
+        objects.push_back(player);
     }
     else {
-        objectsMutex.lock();
         player = getPlayer(playerName);
-        objectsMutex.unlock();
+        ((Character*)player)->loadLuaCode(luaCode);
     }
-    objectsMutex.lock();
-    objects.push_back(player);
+
     objectsMutex.unlock();
 }
 
@@ -218,8 +212,11 @@ std::string Scene::getObjectsJSON() {
         ptree ptObject;
         ptObject.put("x", objects[i]->getX());
         ptObject.put("y", objects[i]->getY());
+        ptObject.put("hp", ((Character*)objects[i])->getHp());
+        ptObject.put("stamina", ((Character*)objects[i])->getStamina());
+        ptObject.put("id", ((Character*)objects[i])->getID());
         playersJson.push_back(make_pair("", ptObject));
-        // TODO: playersJson.put_child(object->getID(), ptObject);
+        //playersJson.put_child(objects[i], ptObject);
     }
     objectsMutex.unlock();
     objectsJson.put<std::string>("messageType", "loadObjects");

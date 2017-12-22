@@ -7,17 +7,17 @@ Engine::Engine::Engine() : wsSocket(nullptr) {
 }
 
 void Engine::Engine::run() {
+    //scene.addObject(new Character(&scene, Position(20, 20), "p1.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
-
-    if (!messageServerConnection())
-    {
+    int ticks = 0;
+    if (!messageServerConnection()) {
         std::cout << "Timeout for connection" << std::endl;
         return;
     }
-    while (true)
-    {
+
+    while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
         //previous = xcurrent;
@@ -29,18 +29,22 @@ void Engine::Engine::run() {
         //}
 
         //scene.print();
+        ++ticks;
         std::string objectsJSON = scene.getObjectsJSON();
-        if (connected.load())
-            wsSocket->send(objectsJSON.c_str());
-        else
-        {
+        if (connected.load()) {
+            if (ticks > 10) {
+                wsSocket->send(objectsJSON.c_str());
+                ticks = 0;
+            }
+        }
+        else {
             delete wsHub;
             if (messageServerConnection())
                 continue;
             std::cout << "Timeout for connection" << std::endl;
             return;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }
 

@@ -48,6 +48,9 @@ void Character::update() {
     case Action::Attack:
         attack();
         break;
+    case Action::Block:
+        block();
+        break;
     case Action::Empty:
     default:;
     }
@@ -77,12 +80,16 @@ void Character::luaPush(lua_State *state) {
 void Character::attack(Character *target) {
     switch (attackType) {
     case AttackType::Fast:
-        target->takeDamage(damage);
+        if (!target->isBlocking() || target->getBlockingType() != AttackType::Fast)
+            target->takeDamage(damage);
         nextAttackTime = scene->getTime() + attackCooldown;
+        loseStamina(10);
         break;
     case AttackType::Strong:
-        target->takeDamage(damage * 2);
+        if (target->getBlockingType() != AttackType::Strong)
+            target->takeDamage(damage * 2);
         nextAttackTime = scene->getTime() + attackCooldown * 2;
+        loseStamina(25);
         break;
     }
 }
@@ -92,12 +99,13 @@ void Character::move(Position newPos) {
     switch(movementType) {
     case MovementType::Sprint:
        nextMoveTime = scene->getTime() + moveCooldown / 2;
+       loseStamina(10);
        break;
     case MovementType::Default:
-        nextMoveTime = scene->getTime() + moveCooldown;
+       nextMoveTime = scene->getTime() + moveCooldown;
+       loseStamina(2);
        break;
     }
-    //setNextMoveTime();
 }
 
 void Character::takeDamage(int amount) {
@@ -105,8 +113,36 @@ void Character::takeDamage(int amount) {
         hitPoints -= amount;
 }
 
+void Character::loadLuaCode(std::string luaCode) {
+    closeLuaState();
+    initLuaState();
+    if (luaL_loadstring(L, luaCode.c_str()) || lua_pcall(L, 0, 0, 0)) {
+        printf("Error loading script\n");
+    }
+}
+
+void Character::loseStamina(int amount) {
+    stamina -= amount;
+    //if (stamina < 0) {
+    //    takeDamage(-stamina);
+    //    stamina = 0;
+    //}
+}
+
+void Character::gainStamina(int amount) {
+    stamina += amount;
+    //if (stamina > maxStamina) {
+    //    gainHp(stamina - maxStamina);
+    //    stamina = maxStamina;
+    //}
+}
+
+void Character::gainHp(int amount) {
+    hitPoints = std::min(hitPoints + amount, maxHitPoints);
+}
+
 Character::~Character() {
-    lua_close(L);
+    closeLuaState();
 }
 
 void Character::attack() {
@@ -211,15 +247,25 @@ void Character::init() {
     direction = Direction::Unknown;
     attackType = AttackType::Fast;
     movementType = MovementType::Default;
-    hitPoints = 100;
+    maxHitPoints = 100;
+    hitPoints = maxHitPoints;
     damage = 10;    //TODO: replace with constants
     speed = 5;
     nextMoveTime = 0;
     nextAttackTime = 0;
     moveCooldown = 16;
-    attackCooldown = 400;
-    stamina = 100;
+    attackCooldown = 400; //160
+    maxStamina = 100;
+    attackRange = 15;
+    stamina = maxStamina;
+    initLuaState();
+}
 
+void Character::closeLuaState() {
+    lua_close(L);
+}
+
+void Character::initLuaState() {
     L = luaL_newstate();
     *static_cast<Character**>(lua_getextraspace(L)) = this;
 
@@ -252,7 +298,6 @@ void Character::init() {
     //lua_pop(L, 1);
 
     luaL_openlibs(L);
-    //lua_pushglobaltable(L); //TODO: replace with a safe environment
     luaL_Reg characterMethods[] = {
         "setAction",       dispatch<Character, &Character::luaSetAction>,
         "getAction",       dispatch<Character, &Character::luaGetAction>,
@@ -272,4 +317,11 @@ void Character::init() {
     };
     luaL_setfuncs(L, characterMethods, 0);
     scene->luaReg(L);
+}
+
+void Character::block() {
+    if (scene->getTime() >= nextAttackTime) { //TODO: place this check in in scene
+        loseStamina(10); //TODO: change
+        nextAttackTime = scene->getTime() + attackCooldown;
+    }
 }
