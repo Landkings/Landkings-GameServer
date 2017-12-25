@@ -40,7 +40,12 @@ int Character::write(lua_State *state) {
 void Character::update() {
     int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
     scene->luaReg(L);
-    lua_pcall(L, 1, 0, 0);
+    if (lua_pcall(L, 1, 0, 0) != 0) {
+        //std::cout << "Error running function f: " << lua_tostring(L, -1) << std::endl;
+        //lua_tostring(L, -1);
+        lua_pop(L, 1);
+        return;
+    }
     switch(action) {
     case Action::Move:
         move();
@@ -61,8 +66,9 @@ void Character::setNextMoveTime() {
 }
 
 void Character::luaPush(lua_State *state) {
-    Character **Pcharacter = (Character**)lua_newuserdata(state, sizeof(Character*));
-    *Pcharacter = this;
+    //Character **Pcharacter = (Character**)lua_newuserdata(state, sizeof(Character*));
+    lua_pushlightuserdata(state, this);
+    //*Pcharacter = this;
     if (luaL_newmetatable(state, "CharacterMetaTable")) {
         lua_pushvalue(state, -1);
         lua_setfield(state, -2, "__index");
