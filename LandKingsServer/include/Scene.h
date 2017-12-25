@@ -5,7 +5,7 @@
 #include <mutex>
 #include <set>
 
-#include <boost/property_tree/json_parser.hpp>
+#include "stringbuffer.h"
 
 #include "Constants.h"
 #include "lua.hpp"
@@ -35,8 +35,8 @@ public:
     const TileMap& getTileMap() const { return tiles; }
     const std::vector<GameObject*>& getObjects() const;
     long long getTime() const { return time; }
-    std::string getObjectsJSON();
-    std::string getTileMapJSON();
+    void getObjectsJSON(rapidjson::StringBuffer& buffer);
+    void getTileMapJSON(rapidjson::StringBuffer& buffer);
 private:
     bool validPosition(const Position &pos);
     //int test(lua_State *L);

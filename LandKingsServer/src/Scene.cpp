@@ -2,8 +2,12 @@
 #include "GameObject.h"
 #include <iomanip>
 
+#include "document.h"
+#include "writer.h"
+#include "stringbuffer.h"
+
 using namespace Engine;
-using namespace boost::property_tree;
+using namespace rapidjson;
 
 //public methods
 
@@ -190,7 +194,7 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 void Scene::clearCorpses() {
     for (int i = objects.size() - 1; i >= 0; --i) {
         if (((Character*)(objects[i]))->getHp() <= 0) {
-            players.erase((Character*)(objects[i])->getID()); //comment to respawn
+            players.erase(((Character*)(objects[i]))->getID()); //comment to respawn
             delete ((Character*)(objects[i]));
             objects.erase(objects.begin() + i);
         }
@@ -205,48 +209,67 @@ const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }
 
-std::string Scene::getObjectsJSON() {
-    ptree objectsJson;
-    ptree playersJson;
-    objectsMutex.lock();    
-    for (int i = 0; i < objects.size(); ++i) {
-        ptree ptObject;
-        ptObject.put("x", objects[i]->getX());
-        ptObject.put("y", objects[i]->getY());
-        ptObject.put("hp", ((Character*)objects[i])->getHp());
-        ptObject.put("stamina", ((Character*)objects[i])->getStamina());
-        ptObject.put("id", ((Character*)objects[i])->getID());
-        playersJson.push_back(make_pair("", ptObject));
-        //playersJson.put_child(objects[i], ptObject);
+void Scene::getObjectsJSON(StringBuffer& buffer) {
+    Document doc(kObjectType);
+    doc.SetObject();
+    Document::AllocatorType& allc = doc.GetAllocator();
+
+    Value messageType(kStringType);
+    messageType.SetString("loadObjects", allc);
+    doc.AddMember("messageType", messageType, allc);
+
+    Value players(kArrayType);
+    Value player(kObjectType);
+    Value nick(kStringType);
+    for (int i = 0; i < objects.size(); ++i)
+    {
+        player.AddMember("x", objects[i]->getX(), allc);
+        player.AddMember("y", objects[i]->getY(), allc);
+        player.AddMember("hp", ((Character*)objects[i])->getHp(), allc);
+        player.AddMember("stamina", ((Character*)objects[i])->getStamina(), allc);
+        nick.SetString(((Character*)objects[i])->getID().data(), allc);
+        player.AddMember("id", nick, allc);
+        players.PushBack(player, allc);
+        player.RemoveAllMembers();
     }
-    objectsMutex.unlock();
-    objectsJson.put<std::string>("messageType", "loadObjects");
-    objectsJson.put_child("players", playersJson);
-    std::stringstream ss;
-    json_parser::write_json(ss, objectsJson);
-    return ss.str();
+    doc.AddMember("players", players, allc);
+
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
 }
 
-std::string Scene::getTileMapJSON() {
-    //engine.waitForMutex(_engine.sceneMutex);
-    ptree result, mapJson;
+void Scene::getTileMapJSON(StringBuffer& buffer) {
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allc = doc.GetAllocator();
+
+    Value messageType(kStringType);
+    messageType.SetString("loadMap", allc);
+    doc.AddMember("messageType", messageType, allc);
+
     int height = tiles.size(), width = tiles[0].size();
-    result.put<std::string>("messageType", "loadMap");
-    result.put<int>("width", width);
-    result.put<int>("height", height);
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            ptree val;
-            val.put("", tiles[i][j]->getIdx());
-            mapJson.push_back(make_pair("", val));
+    Value widthVal(kNumberType), heightVal(kNumberType);
+    heightVal.SetInt(height); widthVal.SetInt(width);
+    doc.AddMember("height", heightVal, allc);
+    doc.AddMember("width", widthVal, allc);
+
+    Value tileMap(kArrayType);
+    Value tileElem(kNumberType);
+    for (int i = 0; i < height; ++i)
+    {
+        Value tileMapRow(kArrayType); // TODO: declare higher
+        for (int j = 0; j < width; ++j)
+        {
+            tileElem.SetInt(tiles[i][j]->getIdx());
+            tileMapRow.PushBack(tileElem, allc);
         }
+        tileMap.PushBack(tileMapRow, allc);
+        // TODO: do that tileMapRow.Clear(); ??? crash
     }
-    result.put_child("tileMap", mapJson);
-    std::stringstream ss;
-    json_parser::write_json(ss, result);
-    return ss.str();
-    //socket->send(ss.str().data(), ss.str().length(), TEXT);
-    //_engine.sceneMutex.unlock();
+    doc.AddMember("tileMap", tileMap, allc);
+
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
 }
 
 

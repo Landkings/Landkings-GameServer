@@ -1,5 +1,9 @@
 #include "Engine.h"
 
+#include "stringbuffer.h"
+
+using namespace rapidjson;
+
 static constexpr uint16_t defaultWsServerPort = 19998;
 
 Engine::Engine::Engine() : wsSocket(nullptr) {
@@ -30,10 +34,11 @@ void Engine::Engine::run() {
 
         //scene.print();
         ++ticks;
-        std::string objectsJSON = scene.getObjectsJSON();
+        StringBuffer buffer;
+        scene.getObjectsJSON(buffer);
         if (connected.load()) {
             if (ticks > 10) {
-                wsSocket->send(objectsJSON.c_str());
+                wsSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
                 ticks = 0;
             }
         }
@@ -57,7 +62,6 @@ void Engine::Engine::update() {
 
 using namespace std;
 using namespace uWS;
-using namespace boost::property_tree;
 
 
 bool Engine::Engine::messageServerConnection()
@@ -111,17 +115,13 @@ bool Engine::Engine::messageServerConnection()
 void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
 {
     std::cout << "Message: " << std::string(message).substr(0, length) << std::endl;
-    ptree pt;
-    if (!ptreeFromString(std::string(message, length), pt))
-    {
-        // something
-        return;
-    }
+    Document doc;
+    doc.Parse(message, length);
     wsSocket = socket;
-    processMessage(pt);
+    processMessage(doc);
 }
 
-void Engine::Engine::processMessage(const ptree& message)
+void Engine::Engine::processMessage(const Document& message)
 {
     MessageType t = getMessageType(message);
     switch (t)
@@ -138,71 +138,32 @@ void Engine::Engine::processMessage(const ptree& message)
     }
 }
 
-void Engine::Engine::processAcceptConnection(const ptree& message)
+void Engine::Engine::processAcceptConnection(const rapidjson::Document& message)
 {
     connected.store(true);
-    std::string tileMapJSON = scene.getTileMapJSON();
-    wsSocket->send(tileMapJSON.c_str());
+    StringBuffer buffer;
+    scene.getTileMapJSON(buffer);
+    wsSocket->send(buffer.GetString(), buffer.GetLength(), TEXT);
 }
 
-void Engine::Engine::processNewPlayer(const ptree& message)
+void Engine::Engine::processNewPlayer(const rapidjson::Document& message)
 {
-    string src, nick;
-    try
-    {
-        src = message.get<string>("sourceCode");
-        nick = message.get<string>("nickname");
-    }
-    catch (...)
-    {
-        // TODO: something
-    }
-    scene.addPlayer(nick, src);
+    scene.addPlayer(message["sourceCode"].GetString(), message["nickname"].GetString());
 }
 
-void Engine::Engine::processUnknown(const ptree& message)
+void Engine::Engine::processUnknown(const rapidjson::Document& message)
 {
-
+    cout << "Unknown message\n";
 }
 
-Engine::Engine::MessageType Engine::Engine::getMessageType(const ptree& message) const
+Engine::Engine::MessageType Engine::Engine::getMessageType(const rapidjson::Document& message) const
 {
-    std::string messageType;
-    try
-    {
-        messageType = message.get<std::string>("messageType");
-    }
-    catch (...)
-    {
-        return MessageType::unknown;
-    }
+    string messageType(message["messageType"].GetString());
     if (messageType == "acceptConnection")
         return MessageType::acceptConnection;
     if (messageType == "newPlayer")
         return MessageType::newPlayer;
     return MessageType::unknown;
-}
-
-bool Engine::Engine::ptreeFromString(const std::string& s, ptree& output)
-{
-    stringstream ss;
-    ss << s;
-    try
-    {
-        json_parser::read_json(ss, output);
-    }
-    catch (...)
-    {
-        return false;
-    }
-    return true;
-}
-
-void Engine::Engine::stringFromPtree(const ptree& pt, std::string& output)
-{
-    stringstream ss;
-    json_parser::write_json(ss, pt);
-    output = ss.str();
 }
 
 // **********
