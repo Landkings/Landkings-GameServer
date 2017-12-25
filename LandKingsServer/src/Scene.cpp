@@ -216,15 +216,11 @@ const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }
 
-void Scene::getObjectsJSON(StringBuffer& buffer) {
+void Scene::createObjectsMessage(StringBuffer& buffer) {
     objectsMutex.lock();
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
-
-    Value messageType(kStringType);
-    messageType.SetString("loadObjects", allc);
-    doc.AddMember("messageType", messageType, allc);
 
     Value players(kArrayType);
     Value nick(kStringType);
@@ -250,7 +246,7 @@ void Scene::getObjectsJSON(StringBuffer& buffer) {
     objectsMutex.unlock();
 }
 
-void Scene::getTileMapJSON(StringBuffer& buffer) {
+void Scene::createMapMessage(StringBuffer& buffer) {
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();

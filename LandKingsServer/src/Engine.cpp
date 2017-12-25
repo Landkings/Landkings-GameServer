@@ -16,11 +16,9 @@ void Engine::Engine::run() {
     auto lag = previous - previous;
     int cnt = 0;
     int ticks = 0;
-    if (!messageServerConnection()) {
-        std::cout << "Timeout for connection" << std::endl;
-        return;
-    }
 
+    if (!messageServerConnection())
+        return;
     while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
@@ -33,20 +31,24 @@ void Engine::Engine::run() {
         //}
 
         //scene.print();
-        ++ticks;
-        StringBuffer buffer;
-        scene.getObjectsJSON(buffer);
-        if (connected.load()) {
-            if (ticks > 32) {
-                wsSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
-                ticks = 0;
-            }
-        }
-        else {
+        if (!connected.load())// && !
+        {
+            gameServerKnow.store(true);
+            while (!messageServerKnow.load())
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            messageServerKnow.store(false);
             if (messageServerConnection())
                 continue;
             std::cout << "Timeout for connection" << std::endl;
             return;
+        }
+        if (++ticks > 32)
+        {
+            StringBuffer buffer;
+            setMessageType(OutputMessageType::loadObjects, buffer);
+            scene.createObjectsMessage(buffer);
+            wsSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
+            ticks = 0;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -88,17 +90,25 @@ bool Engine::Engine::messageServerConnection()
         threadTerminated = false;
         std::thread([this, &threadTerminated]()
         {
-            auto messageHandler = std::bind(&Engine::Engine::onWsMessage, this,
+            auto messageHandler = std::bind(&Engine::Engine::onMsMessage, this,
                                             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
-            wsHub = new uWS::Hub();
-            wsHub->onMessage(messageHandler);
+
+            msHub = new uWS::Hub();
+            msHub->onMessage(messageHandler);
             std::map<std::string, std::string> header;
             std::getline(std::ifstream("secret.txt"), header["secret"]);
-            wsHub->connect("ws://localhost:19998", nullptr, header);
-            wsHub->run();
-            connected.store(false);
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            delete wsHub;
+            msHub->connect("ws://localhost:19998", nullptr, header);
+            msHub->run();
+            if (connected.load())
+            {
+                connected.store(false);
+                messageServerKnow.store(true);
+                while (!gameServerKnow.load())
+                    this_thread::sleep_for(chrono::milliseconds(40));
+                gameServerKnow.store(false);
+            }
+            msHub->getDefaultGroup<CLIENT>().terminate();
+            delete msHub;
             threadTerminated.store(true);
         }).detach();
         while (!threadTerminated.load() && !connected.load() && !timeout.load())
@@ -109,62 +119,67 @@ bool Engine::Engine::messageServerConnection()
             return true;
         }
         if (timeout.load())
-            return false;
+        {
+            while (true)
+            {
+                if (threadTerminated.load())
+                    return false;
+                if (connected.load())
+                    return true;
+                this_thread::sleep_for(chrono::milliseconds(10));
+            }
+        }
     }
 }
 
-void Engine::Engine::onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
+void Engine::Engine::onMsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
 {
-    std::cout << "Message: " << std::string(message).substr(0, length) << std::endl;
-    Document doc;
-    doc.Parse(message, length);
-    wsSocket = socket;
-    processMessage(doc);
-}
-
-void Engine::Engine::processMessage(const Document& message)
-{
-    MessageType t = getMessageType(message);
-    switch (t)
+    InputMessageType type = getMessageType(*message);
+    switch (type)
     {
-        case MessageType::acceptConnection:
-            processAcceptConnection(message);
+        case InputMessageType::acceptConnection:
+            wsSocket = socket;
+            processAcceptConnection();
             return;
-        case MessageType::newPlayer:
-            processNewPlayer(message);
+        case InputMessageType::newPlayer:
+            processNewPlayer(message + 1, length - 1);
             return;
-        case MessageType::unknown:
-            processUnknown(message);
+        default:
+            cout << "Invalid message type" << endl;
             return;
     }
 }
 
-void Engine::Engine::processAcceptConnection(const rapidjson::Document& message)
+void Engine::Engine::processAcceptConnection()
 {
     connected.store(true);
     StringBuffer buffer;
-    scene.getTileMapJSON(buffer);
+    setMessageType(OutputMessageType::loadMap, buffer);
+    scene.createMapMessage(buffer);
     wsSocket->send(buffer.GetString(), buffer.GetLength(), TEXT);
 }
 
-void Engine::Engine::processNewPlayer(const rapidjson::Document& message)
+void Engine::Engine::processNewPlayer(const char* message, size_t length)
 {
-    scene.addPlayer(message["nickname"].GetString(), message["sourceCode"].GetString());
+    string m(message, length);
+    int idx = m.find_first_of('\n');
+    scene.addPlayer(m.substr(0, idx), m.substr(idx + 1));
 }
 
-void Engine::Engine::processUnknown(const rapidjson::Document& message)
+Engine::Engine::InputMessageType Engine::Engine::getMessageType(char firstChar) const
 {
-    cout << "Unknown message\n";
+    switch (firstChar)
+    {
+        case 'c':
+            return InputMessageType::acceptConnection;
+        case 'p':
+            return InputMessageType::newPlayer;
+        default:
+            return InputMessageType::unknown;
+    }
 }
 
-Engine::Engine::MessageType Engine::Engine::getMessageType(const rapidjson::Document& message) const
+void Engine::Engine::setMessageType(OutputMessageType type, StringBuffer& buffer)
 {
-    string messageType(message["messageType"].GetString());
-    if (messageType == "acceptConnection")
-        return MessageType::acceptConnection;
-    if (messageType == "newPlayer")
-        return MessageType::newPlayer;
-    return MessageType::unknown;
+    buffer.Put(static_cast<char>(type));
 }
-
-// **********

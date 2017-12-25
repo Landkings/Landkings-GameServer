@@ -32,24 +32,31 @@ private:
 
     // ***************
 
-    enum class MessageType
+    enum class InputMessageType
     {
-        unknown, acceptConnection, newPlayer
+        unknown = -1, acceptConnection = 'c', newPlayer = 'p'
     };
 
-    MessageType getMessageType(const rapidjson::Document& message) const;
+    enum class OutputMessageType
+    {
+        unknown = -1, loadMap = 'm', loadObjects = 'o'
+    };
 
-    void onWsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode);
-    void processMessage(const rapidjson::Document& message);
-    void processAcceptConnection(const rapidjson::Document& message);
-    void processNewPlayer(const rapidjson::Document& message);
-    void processUnknown(const rapidjson::Document& message);
+    InputMessageType getMessageType(char firstChar) const;
+
+    void onMsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode);
+    void processAcceptConnection();
+    void processNewPlayer(const char* message, size_t length);
 
     bool messageServerConnection();
 
-    uWS::Hub* wsHub;
+    void setMessageType(OutputMessageType type, rapidjson::StringBuffer& buffer);
+
+    uWS::Hub* msHub;
     uWS::WebSocket<uWS::CLIENT>* wsSocket;
     std::atomic<bool> connected;
+    std::atomic<bool> gameServerKnow;
+    std::atomic<bool> messageServerKnow;
 };
 
 }
