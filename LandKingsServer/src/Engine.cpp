@@ -43,7 +43,6 @@ void Engine::Engine::run() {
             }
         }
         else {
-            delete wsHub;
             if (messageServerConnection())
                 continue;
             std::cout << "Timeout for connection" << std::endl;
@@ -98,6 +97,8 @@ bool Engine::Engine::messageServerConnection()
             wsHub->connect("ws://localhost:19998", nullptr, header);
             wsHub->run();
             connected.store(false);
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            delete wsHub;
             threadTerminated.store(true);
         }).detach();
         while (!threadTerminated.load() && !connected.load() && !timeout.load())
