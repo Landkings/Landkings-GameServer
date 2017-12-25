@@ -2,8 +2,12 @@
 #include "GameObject.h"
 #include <iomanip>
 
+#include "document.h"
+#include "writer.h"
+#include "stringbuffer.h"
+
 using namespace Engine;
-using namespace boost::property_tree;
+using namespace rapidjson;
 
 //public methods
 
@@ -50,7 +54,6 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
-    /*
     objectsMutex.lock();
     for (auto& object : objects) {
         if (!((Character*)object)->isOnCooldown()) {
@@ -60,7 +63,7 @@ void Scene::update() {
     }
     clearCorpses();
     objectsMutex.unlock();
-    ++time;*/
+    ++time;
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -108,8 +111,10 @@ void Scene::print() {
 }
 
 void Scene::luaReg(lua_State *L) {
-    Scene **Pscene = (Scene**)lua_newuserdata(L, sizeof(Scene*));
-    *Pscene = this;
+    //Scene **Pscene = (Scene**)lua_newuserdata(L, sizeof(Scene*));
+    //void* p = this;
+    lua_pushlightuserdata(L, this);
+    //*Pscene = this;
     if (luaL_newmetatable(L, "SceneMetaTable")) {
         lua_pushvalue(L, -1);
         lua_setfield(L, -2, "__index");
@@ -119,6 +124,7 @@ void Scene::luaReg(lua_State *L) {
             nullptr, nullptr
         };
         luaL_setfuncs(L, ScannerMethods, 0);
+        std::cout << "MetaTableCreated" << std::endl;
     }
     lua_setmetatable(L, -2);
     //lua_setglobal(L, "Scene");
@@ -134,7 +140,7 @@ bool Scene::validPosition(const Position &pos, const HitBox &hbox) {
 }
 
 int Scene::getObjects(lua_State *L) {
-    Scene* Pscene = *(Scene**)luaL_checkudata(L, 1, "SceneMetaTable");
+    Scene* Pscene = (Scene*)luaL_checkudata(L, 1, "SceneMetaTable");
     lua_newtable(L);
     //std::cout << "Table created" << std::endl;
     int i = 1;
@@ -195,7 +201,7 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 void Scene::clearCorpses() {
     for (int i = objects.size() - 1; i >= 0; --i) {
         if (((Character*)(objects[i]))->getHp() <= 0) {
-            players.erase(((Character*)(objects[i]))->getID());
+            //players.erase(((Character*)(objects[i]))->getID()); //comment to respawn
             delete ((Character*)(objects[i]));
             objects.erase(objects.begin() + i);
         }
@@ -210,46 +216,65 @@ const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }
 
-std::string Scene::getObjectsJSON() {
-    ptree objectsJson;
-    ptree playersJson;
-    objectsMutex.lock();    
-    for (int i = 0; i < objects.size(); ++i) {
-        ptree ptObject;
-        ptObject.put("x", objects[i]->getX());
-        ptObject.put("y", objects[i]->getY());
-        ptObject.put("hp", ((Character*)objects[i])->getHp());
-        ptObject.put("stamina", ((Character*)objects[i])->getStamina());
-        ptObject.put("id", ((Character*)objects[i])->getID());
-        ptObject.put("maxHp", ((Character*)objects[i])->getMaxStamina());
-        ptObject.put("maxStamina", ((Character*)objects[i])->getMaxHp());
-        playersJson.push_back(make_pair("", ptObject));
-        //playersJson.put_child(objects[i], ptObject);
+void Scene::getObjectsJSON(StringBuffer& buffer) {
+    objectsMutex.lock();
+    Document doc(kObjectType);
+    doc.SetObject();
+    Document::AllocatorType& allc = doc.GetAllocator();
+
+    Value messageType(kStringType);
+    messageType.SetString("loadObjects", allc);
+    doc.AddMember("messageType", messageType, allc);
+
+    Value players(kArrayType);
+    Value nick(kStringType);
+    for (int i = 0; i < objects.size(); ++i)
+    {
+        Value player(kObjectType);
+        player.AddMember("x", objects[i]->getX(), allc);
+        player.AddMember("y", objects[i]->getY(), allc);
+        player.AddMember("hp", ((Character*)objects[i])->getHp(), allc);
+        player.AddMember("st", ((Character*)objects[i])->getStamina(), allc);
+        player.AddMember("mhp", ((Character*)objects[i])->getMaxHp(), allc);
+        player.AddMember("mst", ((Character*)objects[i])->getMaxStamina(), allc);
+        nick.SetString(((Character*)objects[i])->getID().data(), allc);
+        player.AddMember("id", nick, allc);
+        players.PushBack(player, allc);
+        //player.RemoveAllMembers();
     }
+    doc.AddMember("players", players, allc);
+
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    allc.Clear();
     objectsMutex.unlock();
-    objectsJson.put<std::string>("messageType", "loadObjects");
-    objectsJson.put_child("players", playersJson);
-    std::stringstream ss;
-    json_parser::write_json(ss, objectsJson);
-    return ss.str();
 }
 
-std::string Scene::getTileMapJSON() {
-    ptree result, mapJson;
+void Scene::getTileMapJSON(StringBuffer& buffer) {
+    Document doc;
+    doc.SetObject();
+    Document::AllocatorType& allc = doc.GetAllocator();
+
+    Value messageType(kStringType);
+    messageType.SetString("loadMap", allc);
+    doc.AddMember("messageType", messageType, allc);
     int height = tiles.size(), width = tiles[0].size();
-    result.put<std::string>("messageType", "loadMap");
-    result.put<int>("width", width);
-    result.put<int>("height", height);
-    for (int i = 0; i < height; ++i) {
-        for (int j = 0; j < width; ++j) {
-            ptree val;
-            val.put("", tiles[i][j]->getIdx());
-            mapJson.push_back(make_pair("", val));
+    Value widthVal(kNumberType), heightVal(kNumberType);
+    heightVal.SetInt(height); widthVal.SetInt(width);
+    doc.AddMember("height", heightVal, allc);
+    doc.AddMember("width", widthVal, allc);
+    Value tileMap(kArrayType);
+    Value tileElem(kNumberType);
+    for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+        {
+            tileElem.SetInt(tiles[i][j]->getIdx());
+            tileMap.PushBack(tileElem, allc);
         }
+        // TODO: do that tileMapRow.Clear(); ??? crash
     }
-    result.put_child("tileMap", mapJson);
-    std::stringstream ss;
-    json_parser::write_json(ss, result);
-    return ss.str();
-    //socket->send(ss.str().data(), ss.str().length(), TEXT);
+    doc.AddMember("tileMap", tileMap, allc);
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
 }
