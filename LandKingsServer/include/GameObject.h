@@ -103,6 +103,8 @@ public:
     int getSpeed() const { return speed; }
     int getHp() const { return hitPoints; }
     int getStamina() const { return stamina; }
+    int getMaxStamina() const { return maxStamina; }
+    int getMaxHp() const { return maxHitPoints; }
     void setHp(const int hp) { hitPoints = hp; }
     int getDamage() const { return damage; }
     void setDirection(const Direction dir) { direction = dir; }
@@ -122,6 +124,8 @@ public:
     void loseStamina(int amount);
     void gainStamina(int amount);
     void gainHp(int amount);
+    bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime();}
+    int getAttackRange() const { return attackRange; }
     ~Character();
     std::string tmpLuaName;
 protected:

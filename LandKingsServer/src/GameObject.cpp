@@ -123,18 +123,18 @@ void Character::loadLuaCode(std::string luaCode) {
 
 void Character::loseStamina(int amount) {
     stamina -= amount;
-    //if (stamina < 0) {
-    //    takeDamage(-stamina);
-    //    stamina = 0;
-    //}
+    if (stamina < 0) {
+        takeDamage(-stamina);
+        stamina = 0;
+    }
 }
 
 void Character::gainStamina(int amount) {
     stamina += amount;
-    //if (stamina > maxStamina) {
-    //    gainHp(stamina - maxStamina);
-    //    stamina = maxStamina;
-    //}
+    if (stamina > maxStamina) {
+        gainHp(stamina - maxStamina);
+        stamina = maxStamina;
+    }
 }
 
 void Character::gainHp(int amount) {

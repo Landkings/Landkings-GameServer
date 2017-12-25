@@ -32,7 +32,7 @@ void Engine::Engine::run() {
         ++ticks;
         std::string objectsJSON = scene.getObjectsJSON();
         if (connected.load()) {
-            if (ticks > 10) {
+            if (ticks > 32) {
                 wsSocket->send(objectsJSON.c_str());
                 ticks = 0;
             }

@@ -7,20 +7,22 @@ using namespace boost::property_tree;
 
 //public methods
 
-Scene::Scene() : land(true, 1), wall(false, 2) {
+Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2) {
     height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
     width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
     time = 0;
     tiles.resize(height);
+    int k = 0; //delete
     for (auto& row : tiles) {
-        row.resize(width, &land);
+        //row.resize(width, (k++ % 2) ? &land : &grass);
+        row.resize(width, &grass);
     }
-//    tiles[8][13] =  &wall;
+    tiles[1][4] =  &land;
 //    tiles[10][13] =  &wall;
 }
 
 void Scene::move(GameObject *object, const Position &new_pos) {
-    if (((Character*)object)->getNextMoveTime() <= time && validPosition(new_pos)) {
+    if (((Character*)object)->getNextMoveTime() <= time && validPosition(new_pos, object->getHitbox())) {
         //((Character*)object)->setNextMoveTime();
         if (!checkSceneCollision(object, &new_pos))
             ((Character*)object)->move(new_pos);
@@ -48,13 +50,17 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
+    /*
     objectsMutex.lock();
     for (auto& object : objects) {
-        object->update();
+        if (!((Character*)object)->isOnCooldown()) {
+            ((Character*)object)->gainStamina(2);
+            object->update();
+        }
     }
     clearCorpses();
     objectsMutex.unlock();
-    ++time;
+    ++time;*/
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -73,7 +79,6 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         player = getPlayer(playerName);
         ((Character*)player)->loadLuaCode(luaCode);
     }
-
     objectsMutex.unlock();
 }
 
@@ -121,11 +126,11 @@ void Scene::luaReg(lua_State *L) {
 
 //private methods
 
-bool Scene::validPosition(const Position & pos) {
-    return pos.getX() >= 0 && //TODO add hitboxes
-           pos.getY() >= 0 &&
-           pos.getX() <= Constants::SCENE_WIDTH &&
-           pos.getY() <= Constants::SCENE_HEIGHT;
+bool Scene::validPosition(const Position &pos, const HitBox &hbox) {
+    return pos.getX() - (hbox.getWidth() / 2)  >= 0 && //TODO add hitboxes
+           pos.getY() - (hbox.getHeight() / 2) >= 0 &&
+           pos.getX() + (hbox.getWidth() / 2)  < Constants::SCENE_WIDTH &&
+           pos.getY() + (hbox.getHeight() / 2) < Constants::SCENE_HEIGHT;
 }
 
 int Scene::getObjects(lua_State *L) {
@@ -190,7 +195,7 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 void Scene::clearCorpses() {
     for (int i = objects.size() - 1; i >= 0; --i) {
         if (((Character*)(objects[i]))->getHp() <= 0) {
-            players.erase((Character*)(objects[i])->getID()); //comment to respawn
+            players.erase(((Character*)(objects[i]))->getID());
             delete ((Character*)(objects[i]));
             objects.erase(objects.begin() + i);
         }
@@ -216,6 +221,8 @@ std::string Scene::getObjectsJSON() {
         ptObject.put("hp", ((Character*)objects[i])->getHp());
         ptObject.put("stamina", ((Character*)objects[i])->getStamina());
         ptObject.put("id", ((Character*)objects[i])->getID());
+        ptObject.put("maxHp", ((Character*)objects[i])->getMaxStamina());
+        ptObject.put("maxStamina", ((Character*)objects[i])->getMaxHp());
         playersJson.push_back(make_pair("", ptObject));
         //playersJson.put_child(objects[i], ptObject);
     }
@@ -228,7 +235,6 @@ std::string Scene::getObjectsJSON() {
 }
 
 std::string Scene::getTileMapJSON() {
-    //engine.waitForMutex(_engine.sceneMutex);
     ptree result, mapJson;
     int height = tiles.size(), width = tiles[0].size();
     result.put<std::string>("messageType", "loadMap");
@@ -246,7 +252,4 @@ std::string Scene::getTileMapJSON() {
     json_parser::write_json(ss, result);
     return ss.str();
     //socket->send(ss.str().data(), ss.str().length(), TEXT);
-    //_engine.sceneMutex.unlock();
 }
-
-

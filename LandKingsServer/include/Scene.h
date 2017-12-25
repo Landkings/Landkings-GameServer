@@ -27,7 +27,6 @@ public:
     void move(GameObject *object, GameObject *target);
     void attack(Character *c1, Character *c2);
     void update();
-    //void addObject(PGameObject obj);
     void addObject(GameObject *obj);
     void addPlayer(std::string playerName, std::string luaCode);
     void print();
@@ -38,8 +37,7 @@ public:
     std::string getObjectsJSON();
     std::string getTileMapJSON();
 private:
-    bool validPosition(const Position &pos);
-    //int test(lua_State *L);
+    bool validPosition(const Position &pos, const HitBox &hbox);
     int getObjects(lua_State *L);
     Position findDirection(GameObject *from, GameObject *to);
     bool isCollide(const GameObject *first, const GameObject *second);
@@ -49,7 +47,6 @@ private:
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
     Position getRandomPosition();
-    //std::vector<PGameObject> objects;
     std::vector<GameObject*> objects;
     std::set<std::string> players;
     TileMap tiles;
@@ -60,6 +57,7 @@ private:
     //todo replace
     Tile land;
     Tile wall;
+    Tile grass;
 };
 
 }
