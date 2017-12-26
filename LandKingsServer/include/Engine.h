@@ -53,10 +53,11 @@ private:
     void setMessageType(OutputMessageType type, rapidjson::StringBuffer& buffer);
 
     uWS::Hub* msHub;
-    uWS::WebSocket<uWS::CLIENT>* wsSocket;
+    uWS::WebSocket<uWS::CLIENT>* msSocket;
     std::atomic<bool> connected;
     std::atomic<bool> gameServerKnow;
     std::atomic<bool> messageServerKnow;
+    std::atomic<bool> msThreadTerminated;
 };
 
 }

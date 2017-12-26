@@ -6,8 +6,8 @@ using namespace rapidjson;
 
 static constexpr uint16_t defaultWsServerPort = 19998;
 
-Engine::Engine::Engine() : wsSocket(nullptr) {
-    connected.store(false);
+Engine::Engine::Engine() {
+
 }
 
 void Engine::Engine::run() {
@@ -16,6 +16,11 @@ void Engine::Engine::run() {
     auto lag = previous - previous;
     int cnt = 0;
     int ticks = 0;
+    connected = false;
+    msThreadTerminated = false;
+    gameServerKnow = false;
+    messageServerKnow = false;
+    msSocket = nullptr;
 
     if (!messageServerConnection())
         return;
@@ -31,12 +36,14 @@ void Engine::Engine::run() {
         //}
 
         //scene.print();
-        if (!connected.load())// && !
+        if (!connected.load())
         {
             gameServerKnow.store(true);
             while (!messageServerKnow.load())
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
             messageServerKnow.store(false);
+            while (!msThreadTerminated.load())
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (messageServerConnection())
                 continue;
             std::cout << "Timeout for connection" << std::endl;
@@ -47,7 +54,7 @@ void Engine::Engine::run() {
             StringBuffer buffer;
             setMessageType(OutputMessageType::loadObjects, buffer);
             scene.createObjectsMessage(buffer);
-            wsSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
+            msSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
             ticks = 0;
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -86,9 +93,8 @@ bool Engine::Engine::messageServerConnection()
     }).detach();
     while (true)
     {
-        std::atomic<bool> threadTerminated;
-        threadTerminated = false;
-        std::thread([this, &threadTerminated]()
+        msThreadTerminated = false;
+        std::thread([this]()
         {
             auto messageHandler = std::bind(&Engine::Engine::onMsMessage, this,
                                             std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
@@ -99,6 +105,7 @@ bool Engine::Engine::messageServerConnection()
             std::getline(std::ifstream("secret.txt"), header["secret"]);
             msHub->connect("ws://localhost:19998", nullptr, header);
             msHub->run();
+            // connection lost
             if (connected.load())
             {
                 connected.store(false);
@@ -109,9 +116,9 @@ bool Engine::Engine::messageServerConnection()
             }
             msHub->getDefaultGroup<CLIENT>().terminate();
             delete msHub;
-            threadTerminated.store(true);
+            msThreadTerminated.store(true);
         }).detach();
-        while (!threadTerminated.load() && !connected.load() && !timeout.load())
+        while (!msThreadTerminated.load() && !connected.load() && !timeout.load())
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
         if (connected.load())
         {
@@ -122,7 +129,7 @@ bool Engine::Engine::messageServerConnection()
         {
             while (true)
             {
-                if (threadTerminated.load())
+                if (msThreadTerminated.load())
                     return false;
                 if (connected.load())
                     return true;
@@ -138,7 +145,7 @@ void Engine::Engine::onMsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* mess
     switch (type)
     {
         case InputMessageType::acceptConnection:
-            wsSocket = socket;
+            msSocket = socket;
             processAcceptConnection();
             return;
         case InputMessageType::newPlayer:
@@ -156,7 +163,7 @@ void Engine::Engine::processAcceptConnection()
     StringBuffer buffer;
     setMessageType(OutputMessageType::loadMap, buffer);
     scene.createMapMessage(buffer);
-    wsSocket->send(buffer.GetString(), buffer.GetLength(), TEXT);
+    msSocket->send(buffer.GetString(), buffer.GetLength(), TEXT);
 }
 
 void Engine::Engine::processNewPlayer(const char* message, size_t length)
