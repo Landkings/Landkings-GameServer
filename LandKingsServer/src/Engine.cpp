@@ -4,7 +4,8 @@
 
 using namespace rapidjson;
 
-static constexpr uint16_t defaultWsServerPort = 19998;
+static constexpr uint16_t defaultMsPort = 19998;
+static constexpr unsigned defaultReconnectionTime = 25; // s
 
 Engine::Engine::Engine() {
 
@@ -17,12 +18,11 @@ void Engine::Engine::run() {
     int cnt = 0;
     int ticks = 0;
     connected = false;
-    msThreadTerminated = true;
     gameServerKnow = false;
     messageServerKnow = false;
-
     if (!messageServerConnection())
         return;
+
     while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
@@ -70,71 +70,79 @@ void Engine::Engine::update() {
 using namespace std;
 using namespace uWS;
 
-
-bool Engine::Engine::messageServerConnection()
+void Engine::Engine::runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& overFlag, unsigned seconds)
 {
-    std::atomic<bool> timeout, stopTimer;
-    timeout = false; stopTimer = false;
-    std::cout << "Try connect to message server" << std::endl;
-    std::thread([this, &timeout, &stopTimer]()
+    stopFlag = false; overFlag = false;
+    std::thread([&stopFlag, &overFlag](unsigned seconds)
     {
-        int secondsCounter = 0;
-        while (!connected.load() && !stopTimer.load())
+        unsigned secondsCounter = 0;
+        while (true)
         {
-            std::cout << 10 - secondsCounter << std::endl;
+            std::cout << seconds - secondsCounter << std::endl;
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            if (++secondsCounter == 10)
+            if (stopFlag.load())
+                return;
+            if (++secondsCounter == seconds)
             {
-                timeout.store(true);
+                overFlag.store(true);
                 return;
             }
         }
+    }, seconds).detach();
+}
+
+void Engine::Engine::runConnection()
+{
+    std::thread([this]()
+    {
+        msThreadTerminated.store(false);
+        auto messageHandler = std::bind(&Engine::Engine::onMsMessage, this,
+                                        std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
+        msHub = new uWS::Hub();
+        msHub->onMessage(messageHandler);
+        std::map<std::string, std::string> header;
+        std::getline(std::ifstream("secret.txt"), header["secret"]);
+        msHub->connect("ws://localhost:19998", nullptr, header, defaultReconnectionTime);
+        msHub->run();
+        // connection lost
+        if (connected.load()) // not first time connection
+        {
+            connected.store(false);
+            messageServerKnow.store(true);
+            while (!gameServerKnow.load())
+                this_thread::sleep_for(chrono::milliseconds(40));
+            gameServerKnow.store(false);
+        }
+        msHub->getDefaultGroup<CLIENT>().terminate();
+        delete msHub;
+        msThreadTerminated.store(true);
     }).detach();
+}
+
+bool Engine::Engine::messageServerConnection()
+{
+    std::cout << "Try connect to message server" << std::endl;
+    std::atomic<bool> timeout;
+    runTimer(connected, timeout, defaultReconnectionTime);
     while (true)
     {
-        msThreadTerminated = false;
-        std::thread([this]()
-        {
-            auto messageHandler = std::bind(&Engine::Engine::onMsMessage, this,
-                                            std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4);
-
-            msHub = new uWS::Hub();
-            msHub->onMessage(messageHandler);
-            std::map<std::string, std::string> header;
-            std::getline(std::ifstream("secret.txt"), header["secret"]);
-            msHub->connect("ws://localhost:19998", nullptr, header);
-            msHub->run();
-            // connection lost
-            if (connected.load())
-            {
-                connected.store(false);
-                messageServerKnow.store(true);
-                while (!gameServerKnow.load())
-                    this_thread::sleep_for(chrono::milliseconds(40));
-                gameServerKnow.store(false);
-            }
-            msHub->getDefaultGroup<CLIENT>().terminate();
-            delete msHub;
-            msThreadTerminated.store(true);
-        }).detach();
-        while (!msThreadTerminated.load() && !connected.load() && !timeout.load())
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        runConnection();
+        std::this_thread::sleep_for(std::chrono::milliseconds(250));
         if (connected.load())
-        {
-            stopTimer.store(true);
             return true;
-        }
         if (timeout.load())
         {
-            while (true)
+            do
             {
-                if (msThreadTerminated.load())
-                    return false;
                 if (connected.load())
                     return true;
-                this_thread::sleep_for(chrono::milliseconds(10));
-            }
+                if (msThreadTerminated.load())
+                    return false;
+                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            } while (!msThreadTerminated.load() && !connected.load());
         }
+        while (!msThreadTerminated.load())
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 }
 

@@ -12,5 +12,6 @@ using namespace std;
 int main(int argc, char* argv[]) {
     Engine::Engine engine;
     engine.run();
+    cout << "vse norm" << endl;
     return 0;
 }

@@ -26,6 +26,7 @@ public:
     Engine();
     void run();
 private:
+
     void update();
 
     Scene scene;
@@ -49,7 +50,9 @@ private:
     void processNewPlayer(const char* message, size_t length);
 
     bool messageServerConnection();
-
+    void messageServerThreadFunction();
+    void runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& overFlag, unsigned seconds);
+    void runConnection();
     void setMessageType(OutputMessageType type, rapidjson::StringBuffer& buffer);
 
     uWS::Hub* msHub;
