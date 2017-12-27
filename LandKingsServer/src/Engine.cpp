@@ -1,27 +1,58 @@
 #include "Engine.h"
 
+#include <iomanip>
+
 #include "stringbuffer.h"
 
 using namespace rapidjson;
+using namespace uWS;
+using namespace std;
+
 
 static constexpr uint16_t defaultMsPort = 19998;
-static constexpr unsigned defaultReconnectionTime = 25; // s
+static constexpr unsigned defaultReconnectionTime = 25;
+static constexpr unsigned defaultLogInterval = 1000;
+
+bool Engine::Engine::expectedFalse = false;
+
 
 Engine::Engine::Engine() {
 
 }
 
+// *** START ***
+
 void Engine::Engine::run() {
+    startPoint = chrono::time_point_cast<chrono::seconds>(chrono::system_clock::now());
+    init();
+    if (connected.load())
+        mainLoop();
+    beforeExit();
+    return;
+}
+
+void Engine::Engine::init()
+{
+    terminationSignal = false;
+    logCaptured = false;
+    logTermSignal = false;
+    logThreadTerminated = false;
+    connected = false;
+    gameServerKnow = false;
+    messageServerKnow = false;
+    runLog();
+    customSleep<milli>(100);
+    if (!messageServerConnection())
+        log("Can't connect to message server");
+}
+
+void Engine::Engine::mainLoop()
+{
     //scene.addObject(new Character(&scene, Position(20, 20), "p1.lua"));
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
     int ticks = 0;
-    connected = false;
-    gameServerKnow = false;
-    messageServerKnow = false;
-    if (!messageServerConnection())
-        return;
 
     while (true) {
         //auto current = std::chrono::system_clock::now();
@@ -45,7 +76,7 @@ void Engine::Engine::run() {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (messageServerConnection())
                 continue;
-            std::cout << "Timeout for connection" << std::endl;
+            log("Connection with MS lost");
             return;
         }
         if (++ticks > 32)
@@ -60,25 +91,98 @@ void Engine::Engine::run() {
     }
 }
 
+void Engine::Engine::beforeExit()
+{
+    if (connected.load())
+        msHub->Group<CLIENT>::close();
+    logTermSignal.store(true);
+    while (!logThreadTerminated.load())
+        customSleep<milli>(10);
+}
+
+void Engine::Engine::terminate()
+{
+    terminationSignal.store(true);
+    beforeExit();
+}
+
+// *** FUNCTIONS ***
+
 void Engine::Engine::update() {
     scene.update();
 }
 
+void Engine::Engine::runLog() {
+    logStream.open("game-server.log", std::ios_base::app);
+    thread([this]()
+    {
+        while (true)
+        {
+            customSleep<milli>(defaultLogInterval);
+            while (!logCaptured.compare_exchange_weak(expectedFalse, true))
+                customSleep<micro>(5);
+            printLogDeq();
+            if (logTermSignal.load())
+            {
+                lastLog();
+                printLogDeq();
+                logStream.close();
+                logThreadTerminated.store(true);
+                return;
+            }
+        }
+    }).detach();
+}
 
-// **********
+void Engine::Engine::log(const string& msg)
+{
+    stringstream buffer;
+    time_t t = time(nullptr);
+    tm* curTime = localtime(&t);
+    buffer << '('
+           << setfill('0') << setw(2) << curTime->tm_mday << 'd' << ' '
+           << setfill('0') << setw(2) << curTime->tm_hour << ':'
+           << setfill('0') << setw(2) << curTime->tm_min << ':'
+           << setfill('0') << setw(2) << curTime->tm_sec
+           << ')';
+    buffer << ' ' << msg << '\n';
+    while (!logCaptured.compare_exchange_weak(expectedFalse, true))
+        customSleep<micro>(10);
+    logDeq.push_back(buffer.str());
+    logCaptured.store(false);
+}
 
-using namespace std;
-using namespace uWS;
+void Engine::Engine::printLogDeq()
+{
+    while (!logDeq.empty())
+    {
+        cout << logDeq[0];
+        logStream << logDeq[0];
+        logDeq.pop_front();
+    }
+    cout.flush();
+    logStream.flush();
+}
+
+void Engine::Engine::lastLog()
+{
+    int64_t uptime = (chrono::time_point_cast<chrono::seconds>(chrono::system_clock::now()) - startPoint).count();
+    if (uptime == 0)
+        return;
+    log(string("Uptime: ") + to_string(uptime) + " seconds");
+}
 
 void Engine::Engine::runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& overFlag, unsigned seconds)
 {
     stopFlag = false; overFlag = false;
-    std::thread([&stopFlag, &overFlag](unsigned seconds)
+    std::thread([this, &stopFlag, &overFlag](unsigned seconds)
     {
         unsigned secondsCounter = 0;
         while (true)
         {
-            std::cout << seconds - secondsCounter << std::endl;
+            if (terminationSignal.load())
+                secondsCounter = seconds - 1;
+            log("Remaining for reconnection: " + to_string(seconds - secondsCounter));
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (stopFlag.load())
                 return;
@@ -121,7 +225,7 @@ void Engine::Engine::runConnection()
 
 bool Engine::Engine::messageServerConnection()
 {
-    std::cout << "Try connect to message server" << std::endl;
+    log("Try connect to message server");
     std::atomic<bool> timeout;
     runTimer(connected, timeout, defaultReconnectionTime);
     while (true)
@@ -138,11 +242,11 @@ bool Engine::Engine::messageServerConnection()
                     return true;
                 if (msThreadTerminated.load())
                     return false;
-                std::this_thread::sleep_for(std::chrono::milliseconds(250));
+                customSleep<milli>(250);
             } while (!msThreadTerminated.load() && !connected.load());
         }
         while (!msThreadTerminated.load())
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            customSleep<milli>(50);
     }
 }
 
@@ -159,7 +263,7 @@ void Engine::Engine::onMsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* mess
             processNewPlayer(message + 1, length - 1);
             return;
         default:
-            cout << "Invalid message type" << endl;
+            log("Invalid message type");
             return;
     }
 }
