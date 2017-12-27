@@ -17,10 +17,9 @@ void Engine::Engine::run() {
     int cnt = 0;
     int ticks = 0;
     connected = false;
-    msThreadTerminated = false;
+    msThreadTerminated = true;
     gameServerKnow = false;
     messageServerKnow = false;
-    msSocket = nullptr;
 
     if (!messageServerConnection())
         return;
