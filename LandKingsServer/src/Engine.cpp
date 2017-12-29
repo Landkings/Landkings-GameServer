@@ -13,7 +13,7 @@ static constexpr uint16_t defaultMsPort = 19998;
 static constexpr unsigned defaultReconnectionTime = 25;
 static constexpr unsigned defaultLogInterval = 1000;
 
-bool Engine::Engine::expectedFalse = false;
+bool Engine::Engine::alwaysFalse = false;
 
 
 Engine::Engine::Engine() {
@@ -43,7 +43,7 @@ void Engine::Engine::init()
     runLog();
     customSleep<milli>(100);
     if (!messageServerConnection())
-        log("Can't connect to message server");
+        log("Can't connect");
 }
 
 void Engine::Engine::mainLoop()
@@ -54,6 +54,8 @@ void Engine::Engine::mainLoop()
     int cnt = 0;
     int ticks = 0;
 
+    int ctr = 0;
+    std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds> _startPoint;
     while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
@@ -76,7 +78,7 @@ void Engine::Engine::mainLoop()
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (messageServerConnection())
                 continue;
-            log("Connection with MS lost");
+            log("Connection lost");
             return;
         }
         if (++ticks > 32)
@@ -119,9 +121,11 @@ void Engine::Engine::runLog() {
         while (true)
         {
             customSleep<milli>(defaultLogInterval);
-            while (!logCaptured.compare_exchange_weak(expectedFalse, true))
+            while (logCaptured.load())
                 customSleep<micro>(5);
+            logCaptured.store(true);
             printLogDeq();
+            logCaptured.store(false);
             if (logTermSignal.load())
             {
                 lastLog();
@@ -146,8 +150,9 @@ void Engine::Engine::log(const string& msg)
            << setfill('0') << setw(2) << curTime->tm_sec
            << ')';
     buffer << ' ' << msg << '\n';
-    while (!logCaptured.compare_exchange_weak(expectedFalse, true))
+    while (logCaptured.load())
         customSleep<micro>(10);
+    logCaptured.store(true);
     logDeq.push_back(buffer.str());
     logCaptured.store(false);
 }

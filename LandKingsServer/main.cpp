@@ -15,7 +15,7 @@ Engine::Engine* enginePtr;
 void sigIntHandler(int)
 {
     enginePtr->terminate();
-    cout << "Terminated normally" << endl;
+    cout << "\nSuccess termination\n" << endl;
     exit(0);
 }
 

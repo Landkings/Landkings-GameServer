@@ -41,7 +41,7 @@ private:
 
     // *******************
 
-    static bool expectedFalse;
+    static bool alwaysFalse;
 
     // *******************
 
