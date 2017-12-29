@@ -34,8 +34,8 @@ public:
     const TileMap& getTileMap() const { return tiles; }
     const std::vector<GameObject*>& getObjects() const;
     long long getTime() const { return time; }
-    void getObjectsJSON(rapidjson::StringBuffer& buffer);
-    void getTileMapJSON(rapidjson::StringBuffer& buffer);
+    void createObjectsMessage(rapidjson::StringBuffer& buffer);
+    void createMapMessage(rapidjson::StringBuffer& buffer);
 private:
     bool validPosition(const Position &pos, const HitBox &hbox);
     int getObjects(lua_State *L);

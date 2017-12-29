@@ -216,14 +216,14 @@ const std::vector<GameObject*>& Scene::getObjects() const {
     return objects;
 }
 
-void Scene::getObjectsJSON(StringBuffer& buffer) {
+void Scene::createObjectsMessage(StringBuffer& buffer) {
     objectsMutex.lock();
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
 
     Value messageType(kStringType);
-    messageType.SetString("loadObjects", allc);
+    messageType.SetString("loadObjects");
     doc.AddMember("messageType", messageType, allc);
 
     Value players(kArrayType);
@@ -240,17 +240,15 @@ void Scene::getObjectsJSON(StringBuffer& buffer) {
         nick.SetString(((Character*)objects[i])->getID().data(), allc);
         player.AddMember("id", nick, allc);
         players.PushBack(player, allc);
-        //player.RemoveAllMembers();
     }
     doc.AddMember("players", players, allc);
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    allc.Clear();
     objectsMutex.unlock();
 }
 
-void Scene::getTileMapJSON(StringBuffer& buffer) {
+void Scene::createMapMessage(StringBuffer& buffer) {
     Document doc;
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
@@ -258,11 +256,13 @@ void Scene::getTileMapJSON(StringBuffer& buffer) {
     Value messageType(kStringType);
     messageType.SetString("loadMap", allc);
     doc.AddMember("messageType", messageType, allc);
+
     int height = tiles.size(), width = tiles[0].size();
     Value widthVal(kNumberType), heightVal(kNumberType);
     heightVal.SetInt(height); widthVal.SetInt(width);
     doc.AddMember("height", heightVal, allc);
     doc.AddMember("width", widthVal, allc);
+
     Value tileMap(kArrayType);
     Value tileElem(kNumberType);
     for (int i = 0; i < height; ++i)
@@ -272,9 +272,9 @@ void Scene::getTileMapJSON(StringBuffer& buffer) {
             tileElem.SetInt(tiles[i][j]->getIdx());
             tileMap.PushBack(tileElem, allc);
         }
-        // TODO: do that tileMapRow.Clear(); ??? crash
     }
     doc.AddMember("tileMap", tileMap, allc);
+
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
 }
