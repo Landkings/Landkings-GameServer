@@ -41,8 +41,6 @@ private:
 
     // *******************
 
-    static bool alwaysFalse;
-
     // *******************
 
     void update();

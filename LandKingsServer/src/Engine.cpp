@@ -13,8 +13,6 @@ static constexpr uint16_t defaultMsPort = 19998;
 static constexpr unsigned defaultReconnectionTime = 25;
 static constexpr unsigned defaultLogInterval = 1000;
 
-bool Engine::Engine::alwaysFalse = false;
-
 
 Engine::Engine::Engine() {
 
@@ -286,6 +284,7 @@ void Engine::Engine::processNewPlayer(const char* message, size_t length)
 {
     string m(message, length);
     int idx = m.find_first_of('\n');
+    log("New player: nick = " + m.substr(0, idx) + "\ncode =\n" + m.substr(idx + 1));
     scene.addPlayer(m.substr(0, idx), m.substr(idx + 1));
 }
 
