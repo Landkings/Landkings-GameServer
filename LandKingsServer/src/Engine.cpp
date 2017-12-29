@@ -184,7 +184,7 @@ void Engine::Engine::runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& ov
         {
             if (terminationSignal.load())
                 secondsCounter = seconds - 1;
-            log("Remaining for reconnection: " + to_string(seconds - secondsCounter));
+            log("Remaining for rc: " + to_string(seconds - secondsCounter));
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (stopFlag.load())
                 return;
@@ -283,7 +283,7 @@ void Engine::Engine::processNewPlayer(const char* message, size_t length)
 {
     string m(message, length);
     int idx = m.find_first_of('\n');
-    log("New player: nick = " + m.substr(0, idx) + "\ncode =\n" + m.substr(idx + 1));
+    log("New player: nick = " + m.substr(0, idx) + " code =\n" + m.substr(idx + 1));
     scene.addPlayer(m.substr(0, idx), m.substr(idx + 1));
 }
 
