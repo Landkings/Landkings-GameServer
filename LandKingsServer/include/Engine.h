@@ -41,8 +41,6 @@ private:
 
     // *******************
 
-    static bool expectedFalse;
-
     // *******************
 
     void update();
