@@ -20,7 +20,6 @@ void Engine::Engine::run() {
         std::cout << "Timeout for connection" << std::endl;
         return;
     }
-
     while (true) {
         //auto current = std::chrono::system_clock::now();
         //auto elapsed = current - previous;
@@ -34,10 +33,10 @@ void Engine::Engine::run() {
 
         //scene.print();
         ++ticks;
-        StringBuffer buffer;
-        scene.getObjectsJSON(buffer);
         if (connected.load()) {
             if (ticks > 32) {
+                StringBuffer buffer;
+                scene.getObjectsJSON(buffer);
                 wsSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
                 ticks = 0;
             }
