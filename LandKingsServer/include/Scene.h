@@ -36,6 +36,7 @@ public:
     long long getTime() const { return time; }
     void createObjectsMessage(rapidjson::StringBuffer& buffer);
     void createMapMessage(rapidjson::StringBuffer& buffer);
+    int test(lua_State *L);
 private:
     bool validPosition(const Position &pos, const HitBox &hbox);
     int getObjects(lua_State *L);
@@ -58,6 +59,7 @@ private:
     Tile land;
     Tile wall;
     Tile grass;
+    int testIdx;
 };
 
 }

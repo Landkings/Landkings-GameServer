@@ -15,6 +15,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2) {
     height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
     width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
     time = 0;
+    testIdx = 0;
     tiles.resize(height);
     int k = 0; //delete
     for (auto& row : tiles) {
@@ -39,8 +40,11 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    Position newPos = c1->getPosition() + findDirection(c1, c2);
-    if (!isCollide(newPos, c1->getHitbox(), c2->getPosition(), c2->getHitbox())) {
+    Position direction = findDirection(c1, c2);
+    HitBox attackHitBox(abs(direction.getX() * c1->getAttackRange()), abs(direction.getY() * c1->getAttackRange()));
+    Position newPos = c1->getPosition() + direction;
+    Position attackPosition = c1->getPosition() + direction * (c1->getAttackRange() / 2);
+    if (!isCollide(attackPosition, attackHitBox, c2->getPosition(), c2->getHitbox())) {
         move(c1, newPos);
     }
     else {
@@ -56,10 +60,11 @@ void Scene::attack(Character *c1, Character *c2) {
 void Scene::update() {
     objectsMutex.lock();
     for (auto& object : objects) {
-        if (!((Character*)object)->isOnCooldown()) {
-            ((Character*)object)->gainStamina(2);
-            object->update();
-        }
+        if (((Character*)object)->getNextStaminaRegenTime() <= time)
+            ((Character*)object)->gainDefaultStamina();
+
+        if (!((Character*)object)->isOnCooldown())
+            ((Character*)object)->update();
     }
     clearCorpses();
     objectsMutex.unlock();
@@ -111,16 +116,17 @@ void Scene::print() {
 }
 
 void Scene::luaReg(lua_State *L) {
-    //Scene **Pscene = (Scene**)lua_newuserdata(L, sizeof(Scene*));
+    Scene **Pscene = (Scene**)lua_newuserdata(L, sizeof(Scene*));
     //void* p = this;
-    lua_pushlightuserdata(L, this);
-    //*Pscene = this;
+    //lua_pushlightuserdata(L, this);
+    *Pscene = this;
     if (luaL_newmetatable(L, "SceneMetaTable")) {
         lua_pushvalue(L, -1);
         lua_setfield(L, -2, "__index");
 
         luaL_Reg ScannerMethods[] = {
             "getObjects", dispatch<Scene, &Scene::getObjects>,
+            "test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
         };
         luaL_setfuncs(L, ScannerMethods, 0);
@@ -133,22 +139,25 @@ void Scene::luaReg(lua_State *L) {
 //private methods
 
 bool Scene::validPosition(const Position &pos, const HitBox &hbox) {
-    return pos.getX() - (hbox.getWidth() / 2)  >= 0 && //TODO add hitboxes
+    return pos.getX() - (hbox.getWidth() / 2)  >= 0 &&
            pos.getY() - (hbox.getHeight() / 2) >= 0 &&
            pos.getX() + (hbox.getWidth() / 2)  < Constants::SCENE_WIDTH &&
            pos.getY() + (hbox.getHeight() / 2) < Constants::SCENE_HEIGHT;
 }
 
 int Scene::getObjects(lua_State *L) {
-    Scene* Pscene = (Scene*)luaL_checkudata(L, 1, "SceneMetaTable");
+    Character* player = *static_cast<Character**>(lua_getextraspace(L));
+    //Scene* Pscene = (Scene*)luaL_checkudata(L, 1, "SceneMetaTable");
     lua_newtable(L);
     //std::cout << "Table created" << std::endl;
     int i = 1;
-    for (auto& object : Pscene->objects) {
+    for (auto& object : objects) {
+        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
+            ((Character*)object)->luaPush(L);
+            lua_rawseti(L, -2, i++);
+        }
         //std::cout << i << " added to table" << std::endl;
         //lua_pushinteger(L, i++);
-        ((Character*)object)->luaPush(L);
-        lua_rawseti(L, -2, i++);
     }
     return 1;
 }
@@ -209,7 +218,7 @@ void Scene::clearCorpses() {
 }
 
 Position Scene::getRandomPosition() {
-    return Position(100, 100); //TODO: add randomness
+    return Position(100 + 40 * objects.size(), 100); //TODO: add randomness
 }
 
 const std::vector<GameObject*>& Scene::getObjects() const {
@@ -237,6 +246,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
         player.AddMember("st", ((Character*)objects[i])->getStamina(), allc);
         player.AddMember("mhp", ((Character*)objects[i])->getMaxHp(), allc);
         player.AddMember("mst", ((Character*)objects[i])->getMaxStamina(), allc);
+        player.AddMember("sid", (int)((Character*)objects[i])->getSpriteDirection(), allc);
         nick.SetString(((Character*)objects[i])->getID().data(), allc);
         player.AddMember("id", nick, allc);
         players.PushBack(player, allc);
@@ -277,4 +287,8 @@ void Scene::createMapMessage(StringBuffer& buffer) {
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
+}
+
+int Scene::test(lua_State *L) {
+    std::cout << testIdx++ << std::endl;
 }

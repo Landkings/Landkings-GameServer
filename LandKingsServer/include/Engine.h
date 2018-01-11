@@ -8,6 +8,7 @@
 #include <fstream>
 #include <atomic>
 #include <string>
+#include <sstream>
 
 #include "document.h"
 

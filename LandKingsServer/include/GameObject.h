@@ -29,6 +29,11 @@ namespace Engine {
   E(Fast, Fast) \
   E(Strong, Strong) \
 
+#define ATTACK_DIRECTION \
+  E(Head, Head) \
+  E(Torso, Torso) \
+  E(Legs, Legs) \
+
 #define MOVEMENT_TYPE \
   E(Default, Default) \
   E(Sprint, Sprint) \
@@ -50,6 +55,9 @@ enum MovementType {
     MOVEMENT_TYPE
 };
 
+enum AttackDirection {
+    ATTACK_DIRECTION
+};
 #undef E
 
 #define E C_ENUM_TO_STRING_HELPER
@@ -60,8 +68,14 @@ static std::map<Action, std::string> actionStrings = {
 static std::map<Direction, std::string> directionStrings = {
     DIRECTION
 };
-
 #undef E
+
+enum class SpriteDirection {
+    Up = 0,
+    Right = 1,
+    Down = 2,
+    Left = 3
+};
 
 const Position directions[4] = {
         Position(0, -1),
@@ -92,6 +106,13 @@ protected:
     std::string name; //?
 };
 
+class Item : public GameObject {
+public:
+    Item(Scene *scene, Position pos, std::string name, HitBox hbox) : GameObject(scene, pos, name, hbox) {}
+private:
+
+};
+
 class Character : public GameObject {
 public:
     Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
@@ -109,10 +130,11 @@ public:
     int getDamage() const { return damage; }
     void setDirection(const Direction dir) { direction = dir; }
     void setTarget (const GameObject *targ) { target = targ; }
-    int getSpeedCooldown() const { return speed; }
+    int getMoveCooldown() const { return speed; }
     long long getNextMoveTime() const { return nextMoveTime; }    
     void setNextMoveTime();
     long long getNextAttackTime() const {return nextAttackTime; }
+    int getVisionRange() const { return visionRange; }
     //void setNextAttackTime();
     void luaPush(lua_State *state);
     void attack(Character *target);
@@ -120,12 +142,18 @@ public:
     void takeDamage(int amount);
     void loadLuaCode(std::string luaCode);
     bool isBlocking() const { return action == Action::Block; }
-    AttackType getBlockingType() const { return attackType; } //TODO: change
+    AttackDirection getBlockDirection() const { return blockDirection; }
+    AttackDirection getAttackDirection() const { return attackDirection; }
     void loseStamina(int amount);
     void gainStamina(int amount);
+    void gainDefaultStamina();
+    long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
     void gainHp(int amount);
-    bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime();}
+    bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
     int getAttackRange() const { return attackRange; }
+    //bool getStaminaHpRegenAvailable() const { return isStaminaHpRegenAvailable; }
+    //void tryToRegenDefaultStamina();
+    SpriteDirection getSpriteDirection() const { return spriteDirection; }
     ~Character();
     std::string tmpLuaName;
 protected:
@@ -141,6 +169,8 @@ protected:
     int luaGetStamina(lua_State *state);
     int luaGetHp(lua_State *state);
     int luaSetAttackType(lua_State *state);
+    int luaSetAttackDirection(lua_State *state);
+    int luaSetBlockDirection(lua_State *state);
     int luaSetMovementType(lua_State *state);
     int luaGetMovementType(lua_State *state);
     int luaGetMe(lua_State *state);
@@ -153,6 +183,8 @@ protected:
     Direction direction;
     AttackType attackType;
     MovementType movementType;
+    AttackDirection attackDirection;
+    AttackDirection blockDirection;
     const GameObject *target;
     int hitPoints;
     int maxHitPoints;
@@ -163,8 +195,14 @@ protected:
     int attackRange;
     long long nextMoveTime; //probably should refactor. Either unite cooldown variables or move up them.
     long long nextAttackTime;
+    long long nextStaminaRegenTime;
     int moveCooldown;
     int attackCooldown;
+    int visionRange;
+    bool isStaminaHpRegenAvailable;
+    int maxStaminaTicksRequirement;
+    int maxStaminaTicks;
+    SpriteDirection spriteDirection;
     lua_State *L;
 };
 typedef std::shared_ptr<Character> PCharacter;

@@ -17,9 +17,15 @@ template<class T>
 using method = int (T::*)(lua_State *L);
 
 template<class T, method<T> func>
-int dispatch(lua_State *L) {
+int gloablDispatch(lua_State *L) {
     T* ptr = *static_cast<T**>(lua_getextraspace(L));
     return ((*ptr).*func)(L);
+}
+
+template<class T, method<T> func>
+int dispatch(lua_State *L) {
+    T* Pobj = *((T**)lua_touserdata(L, 1));
+    return ((*Pobj).*func)(L);
 }
 
 }
