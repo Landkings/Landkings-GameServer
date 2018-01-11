@@ -90,6 +90,7 @@ public:
     GameObject(Scene* scene, Vec2i pos = Vec2i(), std::string name = "", HitBox hbox = HitBox());
     Vec2i getPosition() const { return position; }
     virtual void setPosition(Vec2i pos) { position = pos; }
+    virtual void setName(std::string newName) { name = newName; }
     virtual HitBox getHitbox() const { return hbox; }
     virtual void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     virtual std::string getName() { return name; }
@@ -99,7 +100,7 @@ public:
     virtual int getHeight() const { return hbox.getHeight(); }
     virtual std::string getID() const { return name; }
     virtual bool isPassable() { return false; }
-    virtual void update() = 0;
+    virtual GameObject* clone() = 0;
 protected:
     Vec2i position;
     HitBox hbox;
@@ -135,6 +136,7 @@ public:
     }
     void use(Character *target) override;
     void luaPush(lua_State *state);
+    GameObject *clone();
 private:
     int healAmount;
 };
@@ -144,7 +146,7 @@ public:
     Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
     Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
     //int write(lua_State *state);
-    void update() override;
+    void update();
     void luaPush(lua_State *state);
     void attack(Character *target);
     void move(Vec2i newPos);
@@ -157,6 +159,7 @@ public:
     void gainHp(int amount);
     void block(int amount);
     void takeItem(Item *item);
+    GameObject* clone();
     ~Character();
 
     //getters and setters

@@ -122,7 +122,8 @@ void Character::takeDamage(int amount) {
 }
 
 void Character::loadLuaCode(std::string luaCode) {
-    closeLuaState();
+    if (L != nullptr)
+        closeLuaState();
     initLuaState();
     if (luaL_loadstring(L, luaCode.c_str()) || lua_pcall(L, 0, 0, 0)) {
         std::cout << "Error loading script: " << lua_tostring(L, -1) << std::endl;
@@ -163,6 +164,12 @@ void Character::block(int amount) {
 
 void Character::takeItem(Item *item) {
     inventory.addItem(item);
+}
+
+GameObject *Character::clone() {
+    Character* newCharacter = new Character(*this);
+    newCharacter->L = nullptr;
+    return newCharacter;
 }
 
 Character::~Character() {
@@ -319,6 +326,11 @@ void HealingItem::luaPush(lua_State *state) {
         luaL_setfuncs(state, HealingItemsMethods, 0);
     }
     lua_setmetatable(state, -2);
+}
+
+GameObject *HealingItem::clone() {
+    HealingItem* newHealingItem = new HealingItem(*this);//scene, position, hbox, healAmount, size);
+    return newHealingItem;
 }
 
 //void Item::collect(Character *target) {

@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <unordered_map>
 
 #include "stringbuffer.h"
 
@@ -19,6 +20,8 @@ class GameObject;
 typedef std::shared_ptr<GameObject> PGameObject;
 using TileMap = std::vector<std::vector<Tile*>>;
 class Character;
+class Item;
+class ObjectSpawner;
 
 class Scene {
 public:
@@ -33,7 +36,7 @@ public:
     long long getTime() const { return time; }
     void createObjectsMessage(rapidjson::StringBuffer& buffer);
     void createMapMessage(rapidjson::StringBuffer& buffer);
-    int test(lua_State *L);
+    bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     int luaGetObjects(lua_State *L);
@@ -42,11 +45,11 @@ private:
     bool isCollide(const Vec2i firstPos, const HitBox firstHitBox, const Vec2i secondPos, const HitBox secondHitBox);
     bool isCollide(const Vec2i firstPos, const int firstWidth, const int firstHeight, const Vec2i secondPos, const int secondWidth, const int secondHeight);
     bool checkSceneCollision(const GameObject *obj, const Vec2i *newPos);
-    bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
-    Vec2i getRandomPosition();
+    //Vec2i getRandomPosition();
     std::vector<GameObject*> objects;
+    std::vector<Character*> characters;
     std::set<std::string> players;
     TileMap tiles;
     int height;
@@ -57,7 +60,8 @@ private:
     Tile land;
     Tile wall;
     Tile grass;
-    int testIdx;
+    std::unordered_map<std::string, ObjectSpawner*> spawners;
+    ObjectSpawner *characterSpawner;
 };
 
 }

@@ -1,5 +1,7 @@
 #include "Scene.h"
 #include "GameObject.h"
+#include "ObjectSpawner.h"
+
 #include <iomanip>
 
 #include "document.h"
@@ -11,13 +13,18 @@ using namespace rapidjson;
 
 //public methods
 
-Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2) {
-    height = Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT;
-    width = Constants::SCENE_WIDTH / Constants::TILE_WIDTH;
-    time = 0;
-    testIdx = 0;
+Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
+    height(Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT),
+    width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
+    time(0),
+    characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
+                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/))) {
     tiles.resize(height);
-    int k = 0; //delete
+    spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 1),
+                                         Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
+
+    //add loading map from somewhere or generating
+    //int k = 0; //delete
     for (auto& row : tiles) {
         //row.resize(width, (k++ % 2) ? &land : &grass);
         row.resize(width, &grass);
@@ -59,12 +66,15 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
-    for (auto& object : objects) {
-        if (((Character*)object)->getNextStaminaRegenTime() <= time)
-            ((Character*)object)->gainDefaultStamina();
+    for (auto& spawner : spawners) {
+        //spawner.second->spawn(objects);
+    }
+    for (auto& character : characters) {
+        if (character->getNextStaminaRegenTime() <= time)
+            character->gainDefaultStamina();
 
-        if (!((Character*)object)->isOnCooldown())
-            ((Character*)object)->update();
+        if (!character->isOnCooldown())
+            character->update();
     }
     clearCorpses();
     objectsMutex.unlock();
@@ -76,16 +86,18 @@ void Scene::addObject(GameObject *obj) {
 }
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
-    GameObject *player;
+    Character* player;
     objectsMutex.lock();
     if (players.find(playerName) == players.end()) {
-        player = new Character(this, luaCode, playerName, getRandomPosition());
+        player = (Character*)characterSpawner->spawn(characters);
+        player->loadLuaCode(luaCode);
+        player->setName(playerName);
         players.insert(playerName);
-        objects.push_back(player);
+        //characters.push_back(player);
     }
     else {
-        player = getPlayer(playerName);
-        ((Character*)player)->loadLuaCode(luaCode);
+        player = (Character*)getPlayer(playerName);
+        player->loadLuaCode(luaCode);
     }
     objectsMutex.unlock();
 }
@@ -125,7 +137,7 @@ int Scene::luaGetObjects(lua_State *L) {
     lua_newtable(L);
     //std::cout << "Table created" << std::endl;
     int i = 1;
-    for (auto& object : objects) {
+    for (auto& object : characters) {
         if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
             ((Character*)object)->luaPush(L);
             lua_rawseti(L, -2, i++);
@@ -178,11 +190,16 @@ bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
             if (isCollide(obj, object))
                 return false;
 
+    for (auto& character : characters)
+        if (character != obj)
+            if (isCollide(obj, character))
+                return false;
+
     return !checkSceneCollision(obj, newPos);
 }
 
 GameObject *Scene::getPlayer(std::string &playerName) {
-    for (auto& obj: objects)
+    for (auto& obj: characters)
         if (obj->getName() == playerName)
             return obj;
 
@@ -190,18 +207,18 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 }
 
 void Scene::clearCorpses() {
-    for (int i = objects.size() - 1; i >= 0; --i) {
-        if (((Character*)(objects[i]))->getHp() <= 0) {
-            //players.erase(((Character*)(objects[i]))->getID()); //comment to respawn
-            delete ((Character*)(objects[i]));
-            objects.erase(objects.begin() + i);
+    for (int i = characters.size() - 1; i >= 0; --i) {
+        if (characters[i]->getHp() <= 0) {
+            //players.erase(characters[i]->getID()); //comment to respawn
+            delete characters[i];
+            characters.erase(characters.begin() + i);
         }
     }
 }
 
-Vec2i Scene::getRandomPosition() {
-    return Vec2i(100 + 40 * objects.size(), 100); //TODO: add randomness
-}
+//Vec2i Scene::getRandomPosition() {
+//    return Vec2i(100 + 40 * characters.size(), 100); //TODO: add randomness
+//}
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
     objectsMutex.lock();
@@ -215,17 +232,16 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Value players(kArrayType);
     Value nick(kStringType);
-    for (int i = 0; i < objects.size(); ++i)
-    {
+    for (auto& character : characters) {
         Value player(kObjectType);
-        player.AddMember("x", objects[i]->getX(), allc);
-        player.AddMember("y", objects[i]->getY(), allc);
-        player.AddMember("hp", ((Character*)objects[i])->getHp(), allc);
-        player.AddMember("st", ((Character*)objects[i])->getStamina(), allc);
-        player.AddMember("mhp", ((Character*)objects[i])->getMaxHp(), allc);
-        player.AddMember("mst", ((Character*)objects[i])->getMaxStamina(), allc);
-        player.AddMember("sid", (int)((Character*)objects[i])->getSpriteDirection(), allc);
-        nick.SetString(((Character*)objects[i])->getID().data(), allc);
+        player.AddMember("x", character->getX(), allc);
+        player.AddMember("y", character->getY(), allc);
+        player.AddMember("hp", character->getHp(), allc);
+        player.AddMember("st", character->getStamina(), allc);
+        player.AddMember("mhp", character->getMaxHp(), allc);
+        player.AddMember("mst", character->getMaxStamina(), allc);
+        player.AddMember("sid", (int)character->getSpriteDirection(), allc);
+        nick.SetString(character->getID().data(), allc);
         player.AddMember("id", nick, allc);
         players.PushBack(player, allc);
     }
@@ -267,6 +283,6 @@ void Scene::createMapMessage(StringBuffer& buffer) {
     doc.Accept(writer);
 }
 
-int Scene::test(lua_State *L) {
-    std::cout << testIdx++ << std::endl;
-}
+//int Scene::test(lua_State *L) {
+//    std::cout << testIdx++ << std::endl;
+//}
