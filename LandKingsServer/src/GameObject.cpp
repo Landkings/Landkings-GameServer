@@ -103,7 +103,7 @@ void Character::attack(Character *target) {
     if (!target->isBlocking() || target->getBlockDirection() != attackDirection)
         target->takeDamage(currentDamage);
     else
-        target->loseStamina(currentDamage * 2); //maybe do not multiply by 2
+        target->block(currentDamage * 2); //maybe do not multiply by 2
 }
 
 void Character::move(Position newPos) {
@@ -172,6 +172,10 @@ void Character::gainDefaultStamina() {
 
 void Character::gainHp(int amount) {
     hitPoints = std::min(hitPoints + amount, maxHitPoints);
+}
+
+void Character::block(int amount) {
+    loseStamina(amount);
 }
 
 Character::~Character() {

@@ -151,8 +151,8 @@ public:
     void gainHp(int amount);
     bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
     int getAttackRange() const { return attackRange; }
-    //bool getStaminaHpRegenAvailable() const { return isStaminaHpRegenAvailable; }
-    //void tryToRegenDefaultStamina();
+    AttackType getAttackType() const { return attackType; }
+    void block(int amount);
     SpriteDirection getSpriteDirection() const { return spriteDirection; }
     ~Character();
     std::string tmpLuaName;
