@@ -16,7 +16,7 @@
 
 #include "Scene.h"
 #include "GameObject.h"
-#include "Position.h"
+#include "Vec2i.h"
 
 
 namespace Engine {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Position.h"
+#include "Vec2i.h"
 
 namespace Engine {
 
@@ -10,7 +10,7 @@ public:
     int getHeight() const { return height; }
     int getWidth() const { return width; }
     bool isCollide(const HitBox& target);
-    bool isCollide(const Position &lb, const Position &ru);
+    bool isCollide(const Vec2i &lb, const Vec2i &ru);
 private:
     int height;
     int width;

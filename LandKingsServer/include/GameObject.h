@@ -5,10 +5,11 @@
 #include <map>
 
 #include "Scene.h"
-#include "Position.h"
+#include "Vec2i.h"
 #include "Hitbox.h"
 #include "lua.hpp"
 #include "LuaHelper.h"
+#include "Inventory.h"
 
 namespace Engine {
 
@@ -77,18 +78,18 @@ enum class SpriteDirection {
     Left = 3
 };
 
-const Position directions[4] = {
-        Position(0, -1),
-        Position(1, 0),
-        Position(0, 1),
-        Position(-1, 0)
+const Vec2i directions[4] = {
+        Vec2i(0, -1),
+        Vec2i(1, 0),
+        Vec2i(0, 1),
+        Vec2i(-1, 0)
 };
 
 class GameObject {
 public:
-    GameObject(Scene* scene, Position pos = Position(), std::string name = "", HitBox hbox = HitBox());
-    Position getPosition() const { return position; }
-    virtual void setPosition(Position pos) { position = pos; }
+    GameObject(Scene* scene, Vec2i pos = Vec2i(), std::string name = "", HitBox hbox = HitBox());
+    Vec2i getPosition() const { return position; }
+    virtual void setPosition(Vec2i pos) { position = pos; }
     virtual HitBox getHitbox() const { return hbox; }
     virtual void setHitbox(HitBox& hitbox) { hbox = hitbox; }
     virtual std::string getName() { return name; }
@@ -100,7 +101,7 @@ public:
     virtual bool isPassable() { return false; }
     virtual void update() = 0;
 protected:
-    Position position;
+    Vec2i position;
     HitBox hbox;
     Scene *scene;
     std::string name; //?
@@ -108,56 +109,90 @@ protected:
 
 class Item : public GameObject {
 public:
-    Item(Scene *scene, Position pos, std::string name, HitBox hbox) : GameObject(scene, pos, name, hbox) {}
-private:
+    Item(Scene *scene, Vec2i pos, std::string name, HitBox hbox, int size) :
+        GameObject(scene, pos, name, hbox),
+        isUsed(false),
+        size(size),
+        isInInventory(false) {
+    }
+    virtual void use(Character* target) = 0;
+    virtual bool used() const { return isUsed; }
+    virtual int getSize() const { return size; }
+    //virtual void collect(Character* target);
+    virtual bool inInventory() const { return isInInventory; }
+    virtual void luaPush(lua_State *state) = 0;
+protected:
+    bool isUsed;
+    int size;
+    bool isInInventory;
+};
 
+class HealingItem : public Item {
+public:
+    HealingItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size) :
+        Item(scene, pos, "HealingItem", hbox, size),
+        healAmount(amount) {
+    }
+    void use(Character *target) override;
+    void luaPush(lua_State *state);
+private:
+    int healAmount;
 };
 
 class Character : public GameObject {
 public:
-    Character(Scene *scene, Position pos = Position(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
-    Character(Scene *scene, std::string luaCode, std::string name, Position pos = Position());
-    void move();
-    void attack();
-    int write(lua_State *state);
+    Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
+    Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
+    //int write(lua_State *state);
     void update() override;
-    int getSpeed() const { return speed; }
-    int getHp() const { return hitPoints; }
-    int getStamina() const { return stamina; }
-    int getMaxStamina() const { return maxStamina; }
-    int getMaxHp() const { return maxHitPoints; }
-    void setHp(const int hp) { hitPoints = hp; }
-    int getDamage() const { return damage; }
-    void setDirection(const Direction dir) { direction = dir; }
-    void setTarget (const GameObject *targ) { target = targ; }
-    int getMoveCooldown() const { return speed; }
-    long long getNextMoveTime() const { return nextMoveTime; }    
-    void setNextMoveTime();
-    long long getNextAttackTime() const {return nextAttackTime; }
-    int getVisionRange() const { return visionRange; }
-    //void setNextAttackTime();
     void luaPush(lua_State *state);
     void attack(Character *target);
-    void move(Position newPos);
+    void move(Vec2i newPos);
     void takeDamage(int amount);
     void loadLuaCode(std::string luaCode);
-    bool isBlocking() const { return action == Action::Block; }
-    AttackDirection getBlockDirection() const { return blockDirection; }
-    AttackDirection getAttackDirection() const { return attackDirection; }
+    bool blocking() const { return action == Action::Block; }
     void loseStamina(int amount);
     void gainStamina(int amount);
     void gainDefaultStamina();
-    long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
     void gainHp(int amount);
+    void block(int amount);
+    void takeItem(Item *item);
+    ~Character();
+
+    //getters and setters
+    int getSpeed() const { return speed; }
+    int getHp() const { return hitPoints; }
+    void setHp(const int hp) { hitPoints = hp; }
+    int getMaxHp() const { return maxHitPoints; }
+    int getStamina() const { return stamina; }
+    int getMaxStamina() const { return maxStamina; }
+    int getDamage() const { return damage; }
+    void setDirection(const Direction dir) { direction = dir; }
+    void setTarget (const GameObject *targ) { target = targ; }
+    int getMoveCooldown() const { return moveCooldown; }
+    long long getNextMoveTime() const { return nextMoveTime; }    
+    long long getNextAttackTime() const {return nextAttackTime; }
+    int getVisionRange() const { return visionRange; }
+    SpriteDirection getSpriteDirection() const { return spriteDirection; }
     bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
     int getAttackRange() const { return attackRange; }
     AttackType getAttackType() const { return attackType; }
-    void block(int amount);
-    SpriteDirection getSpriteDirection() const { return spriteDirection; }
-    ~Character();
-    std::string tmpLuaName;
+    AttackDirection getBlockDirection() const { return blockDirection; }
+    AttackDirection getAttackDirection() const { return attackDirection; }
+    long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
+    int getAttackStaminaCost() const { return attackStaminaCost; }
+    int getMoveStaminaCost() const { return moveStaminaCost; }
+    int getBlockStaminaCost() const { return blockStaminaCost; }
+    int getSprintStaminaCost() const { return sprintStaminaCost; }
 protected:
-    //int move(lua_State *state);
+    void init();
+    void initLuaState();
+    void closeLuaState();
+    void move();
+    void attack();
+    void block();
+
+    //lua functions
     int luaSetAction(lua_State *state);
     int luaGetAction(lua_State *state);
     int luaSetDirection(lua_State *state);
@@ -173,12 +208,13 @@ protected:
     int luaSetBlockDirection(lua_State *state);
     int luaSetMovementType(lua_State *state);
     int luaGetMovementType(lua_State *state);
-    int luaGetMe(lua_State *state);
-    int test(lua_State *stata);
-    void init();
-    void closeLuaState();
-    void initLuaState();
-    void block();
+    int luaGetMe(lua_State *state); //maybe delete
+    int luaGetAttackStaminaCost(lua_State *state);
+    int luaGetMoveStaminaCost(lua_State *state);
+    int luaGetBlockStaminaCost(lua_State *state);
+    int luaGetSprintStaminaCost(lua_State *state);
+
+    //attributes
     Action action;
     Direction direction;
     AttackType attackType;
@@ -193,8 +229,8 @@ protected:
     int stamina;
     int maxStamina;
     int attackRange;
-    long long nextMoveTime; //probably should refactor. Either unite cooldown variables or move up them.
-    long long nextAttackTime;
+    long long nextMoveTime;   //probably should refactor. Either unite cooldown variables or move up them.
+    long long nextAttackTime; //
     long long nextStaminaRegenTime;
     int moveCooldown;
     int attackCooldown;
@@ -202,7 +238,12 @@ protected:
     bool isStaminaHpRegenAvailable;
     int maxStaminaTicksRequirement;
     int maxStaminaTicks;
+    int attackStaminaCost;
+    int moveStaminaCost;
+    int blockStaminaCost; //maybe delete
+    int sprintStaminaCost;
     SpriteDirection spriteDirection;
+    Inventory inventory;
     lua_State *L;
 };
 typedef std::shared_ptr<Character> PCharacter;

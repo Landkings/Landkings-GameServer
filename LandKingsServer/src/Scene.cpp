@@ -26,24 +26,24 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2) {
 //    tiles[10][13] =  &wall;
 }
 
-void Scene::move(GameObject *object, const Position &new_pos) {
-    if (((Character*)object)->getNextMoveTime() <= time && validPosition(new_pos, object->getHitbox())) {
+void Scene::move(GameObject *object, const Vec2i &newPos) {
+    if (((Character*)object)->getNextMoveTime() <= time && validPosition(newPos, object->getHitbox())) {
         //((Character*)object)->setNextMoveTime();
-        if (!checkSceneCollision(object, &new_pos))
-            ((Character*)object)->move(new_pos);
+        if (checkAllCollisions(object, &newPos))
+            ((Character*)object)->move(newPos);
     }
 }
 
 void Scene::move(GameObject *object, GameObject *target) {
-    Position direction = findDirection(object, target);
+    Vec2i direction = findDirection(object, target);
     move(object, object->getPosition() + direction);
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    Position direction = findDirection(c1, c2);
+    Vec2i direction = findDirection(c1, c2);
     HitBox attackHitBox(abs(direction.getX() * c1->getAttackRange()), abs(direction.getY() * c1->getAttackRange()));
-    Position newPos = c1->getPosition() + direction;
-    Position attackPosition = c1->getPosition() + direction * (c1->getAttackRange() / 2);
+    Vec2i newPos = c1->getPosition() + direction;
+    Vec2i attackPosition = c1->getPosition() + direction * (c1->getAttackRange() / 2);
     if (!isCollide(attackPosition, attackHitBox, c2->getPosition(), c2->getHitbox())) {
         move(c1, newPos);
     }
@@ -90,32 +90,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
     objectsMutex.unlock();
 }
 
-void Scene::print() {
-//    for (auto& object : objects)
-//        std::cout << object->tmpLuaName << "\nHp: " << std::setw(3) << std::right << ((Character*)object)->getHp() << std::endl;
-
-    std::vector<std::string> sc;
-    for (int i = 0; i < 20; ++i) {
-        std::string tmp = "";
-        for (int j = 0; j < 25; ++j) {
-            tmp += '.';
-        }
-        sc.push_back(tmp);
-    }
-    for (auto object : objects) {
-        Position pos = object->getPosition();
-        sc[pos.getY()][pos.getX()] = 'X';
-    }
-    for (auto& row : sc) {
-        for (auto& col : row) {
-            std::cout << col;
-        }
-        std::cout << "\n";
-    }
-    std::cout << std::flush;
-}
-
-void Scene::luaReg(lua_State *L) {
+void Scene::luaPush(lua_State *L) {
     Scene **Pscene = (Scene**)lua_newuserdata(L, sizeof(Scene*));
     //void* p = this;
     //lua_pushlightuserdata(L, this);
@@ -124,13 +99,12 @@ void Scene::luaReg(lua_State *L) {
         lua_pushvalue(L, -1);
         lua_setfield(L, -2, "__index");
 
-        luaL_Reg ScannerMethods[] = {
-            "getObjects", dispatch<Scene, &Scene::getObjects>,
-            "test", dispatch<Scene, &Scene::test>,
+        luaL_Reg SceneMethods[] = {
+            "getObjects", dispatch<Scene, &Scene::luaGetObjects>,
+            //"test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
         };
-        luaL_setfuncs(L, ScannerMethods, 0);
-        std::cout << "MetaTableCreated" << std::endl;
+        luaL_setfuncs(L, SceneMethods, 0);
     }
     lua_setmetatable(L, -2);
     //lua_setglobal(L, "Scene");
@@ -138,14 +112,14 @@ void Scene::luaReg(lua_State *L) {
 
 //private methods
 
-bool Scene::validPosition(const Position &pos, const HitBox &hbox) {
+bool Scene::validPosition(const Vec2i &pos, const HitBox &hbox) {
     return pos.getX() - (hbox.getWidth() / 2)  >= 0 &&
            pos.getY() - (hbox.getHeight() / 2) >= 0 &&
            pos.getX() + (hbox.getWidth() / 2)  < Constants::SCENE_WIDTH &&
            pos.getY() + (hbox.getHeight() / 2) < Constants::SCENE_HEIGHT;
 }
 
-int Scene::getObjects(lua_State *L) {
+int Scene::luaGetObjects(lua_State *L) {
     Character* player = *static_cast<Character**>(lua_getextraspace(L));
     //Scene* Pscene = (Scene*)luaL_checkudata(L, 1, "SceneMetaTable");
     lua_newtable(L);
@@ -162,13 +136,13 @@ int Scene::getObjects(lua_State *L) {
     return 1;
 }
 
-Position Scene::findDirection(GameObject *from, GameObject *to) {
+Vec2i Scene::findDirection(GameObject *from, GameObject *to) {
     int diff;
     if ((diff = to->getX() - from->getX())) {
-        return Position(diff/abs(diff), 0);
+        return Vec2i(diff/abs(diff), 0);
     }
     else if ((diff = to->getY() - from->getY())) {
-        return Position(0, diff/abs(diff));
+        return Vec2i(0, diff/abs(diff));
     }
 }
 
@@ -176,18 +150,18 @@ bool Scene::isCollide(const GameObject *first, const GameObject *second) {
     return isCollide(first->getPosition(), first->getHitbox(), second->getPosition(), second->getHitbox());
 }
 
-bool Scene::isCollide(const Position firstPos, const HitBox firstHitBox, const Position secondPos, const HitBox secondHitBox) {
+bool Scene::isCollide(const Vec2i firstPos, const HitBox firstHitBox, const Vec2i secondPos, const HitBox secondHitBox) {
     return isCollide(firstPos, firstHitBox.getWidth(), firstHitBox.getHeight(), secondPos, secondHitBox.getWidth(), secondHitBox.getHeight());
 }
 
-bool Scene::isCollide(const Position firstPos, const int firstWidth, const int firstHeight, const Position secondPos, const int secondWidth, const int secondHeight) {
+bool Scene::isCollide(const Vec2i firstPos, const int firstWidth, const int firstHeight, const Vec2i secondPos, const int secondWidth, const int secondHeight) {
     return firstPos.getX() < secondPos.getX() + secondWidth &&
            firstPos.getX() + firstWidth > secondPos.getX() &&
            firstPos.getY() < secondPos.getY() + secondHeight &&
            firstPos.getY() + firstHeight > secondPos.getY();
 }
 
-bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) { //TODO AABB tree optimization
+bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) { //TODO AABB tree optimization
     for (int i = (newPos->getY() - obj->getHeight() / 2) / Constants::TILE_HEIGHT;
          i <= (newPos->getY() + obj->getHeight() / 2) / Constants::TILE_HEIGHT; ++i)
         for (int j = (newPos->getX() - obj->getWidth() / 2) / Constants::TILE_WIDTH;
@@ -198,12 +172,20 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Position *newPos) {
     return false;
 }
 
+bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
+    for (auto& object : objects)
+        if (object != obj)
+            if (isCollide(obj, object))
+                return false;
+
+    return !checkSceneCollision(obj, newPos);
+}
+
 GameObject *Scene::getPlayer(std::string &playerName) {
-    for (auto& obj: objects) {
-        if (obj->getName() == playerName) {
+    for (auto& obj: objects)
+        if (obj->getName() == playerName)
             return obj;
-        }
-    }
+
     return nullptr;
 }
 
@@ -217,12 +199,8 @@ void Scene::clearCorpses() {
     }
 }
 
-Position Scene::getRandomPosition() {
-    return Position(100 + 40 * objects.size(), 100); //TODO: add randomness
-}
-
-const std::vector<GameObject*>& Scene::getObjects() const {
-    return objects;
+Vec2i Scene::getRandomPosition() {
+    return Vec2i(100 + 40 * objects.size(), 100); //TODO: add randomness
 }
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
