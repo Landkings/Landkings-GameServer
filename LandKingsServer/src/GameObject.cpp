@@ -25,9 +25,18 @@ Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i 
 void Character::update() {
     int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
     scene->luaPush(L);
-    if (lua_pcall(L, 1, 0, 0) != 0) {
+    lua_KContext ctx;
+    //lua_
+    int res = lua_pcallk(L, 1, 0, 0, ctx, &dispatchContinuation<Character, &Character::luaContinuationTest>);
+    if (res != LUA_OK) {
+        std::cout << "Status: " << lua_status(L) << std::endl;
         //std::cout << "Error running function f: " << lua_tostring(L, -1) << std::endl;
         //lua_tostring(L, -1);
+        if (res == LUA_YIELD)
+            std::cout << "We yielded" << std::endl;
+        else {
+            std::cout << "Something different occured. res = " << res << std::endl;
+        }
         lua_pop(L, 1);
         return;
     }
@@ -166,6 +175,10 @@ void Character::takeItem(Item *item) {
     inventory.addItem(item);
 }
 
+void Character::useItem(Item *item) {
+    item->use(this);
+}
+
 GameObject *Character::clone() {
     Character* newCharacter = new Character(*this);
     newCharacter->L = nullptr;
@@ -217,6 +230,8 @@ void Character::closeLuaState() {
 void Character::initLuaState() {
     L = luaL_newstate();
     *static_cast<Character**>(lua_getextraspace(L)) = this;
+    //lua_Hook h(&dispatchHook<Character, &Character::luaCountHook>);
+    lua_sethook(L, dispatchHook<Character, &Character::luaCountHook>, LUA_MASKCOUNT, 100000); //todo tune up
 
     lua_pushglobaltable(L); //TODO: replace global environment with a safe environment
 #define E LUA_ENUM_HELPER
@@ -308,7 +323,7 @@ void Character::block() {
 
 void HealingItem::use(Character *target) {
     target->gainHp(healAmount);
-    isUsed = true;
+    ++consumedCharges;
 }
 
 void HealingItem::luaPush(lua_State *state) {
@@ -448,4 +463,18 @@ int Character::luaGetBlockStaminaCost(lua_State *state) {
 int Character::luaGetSprintStaminaCost(lua_State *state) {
     lua_pushinteger(state, getSprintStaminaCost());
     return 1;
+}
+
+void Character::luaCountHook(lua_State *state, lua_Debug *ar) {
+    //lua_getinfo(L, ar);
+    //std:: cout << "Is yieldable: " << lua_isyieldable(state) << std::endl;
+    //lua_yield(state, 0);
+    //lua_resume(L, L, 0);
+    //std::cout << "Hook called" << std::endl;
+    lua_error(state);
+    //lua_resume(state, 0);
+}
+
+int Character::luaContinuationTest(lua_State *state, int status, lua_KContext ctx) {
+    std::cout << "We are in continuation function" << std::endl;
 }

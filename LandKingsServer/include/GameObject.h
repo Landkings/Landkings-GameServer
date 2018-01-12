@@ -110,28 +110,42 @@ protected:
 
 class Item : public GameObject {
 public:
-    Item(Scene *scene, Vec2i pos, std::string name, HitBox hbox, int size) :
+    Item(Scene *scene, Vec2i pos, std::string name, HitBox hbox, int size, int maxCharges,
+         int useCooldown, int staminaCost, int actionCooldown) :
         GameObject(scene, pos, name, hbox),
-        isUsed(false),
+        maxCharges(maxCharges),
+        consumedCharges(0),
         size(size),
-        isInInventory(false) {
+        isInInventory(false),
+        useCooldown(useCooldown),
+        staminaCost(staminaCost),
+        actionCooldown(actionCooldown) {
     }
     virtual void use(Character* target) = 0;
-    virtual bool used() const { return isUsed; }
+    virtual bool used() const { return consumedCharges == maxCharges; }
+    virtual int chargesLeft() const { return maxCharges - consumedCharges ; }
     virtual int getSize() const { return size; }
+    virtual int getUseCooldown() const { return useCooldown; }
+    virtual int getStaminaCost() const { return staminaCost; }
+    virtual int getActionCooldown() const { return actionCooldown; }
     //virtual void collect(Character* target);
     virtual bool inInventory() const { return isInInventory; }
     virtual void luaPush(lua_State *state) = 0;
 protected:
-    bool isUsed;
+    int maxCharges;
+    int consumedCharges;
     int size;
     bool isInInventory;
+    int useCooldown;
+    int staminaCost;
+    int actionCooldown;
 };
 
 class HealingItem : public Item {
 public:
-    HealingItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size) :
-        Item(scene, pos, "HealingItem", hbox, size),
+    HealingItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size, int maxCharges,
+                int useCooldown, int staminaCost, int actionCooldown) :
+        Item(scene, pos, "HealingItem", hbox, size, maxCharges, useCooldown, staminaCost, actionCooldown),
         healAmount(amount) {
     }
     void use(Character *target) override;
@@ -159,6 +173,7 @@ public:
     void gainHp(int amount);
     void block(int amount);
     void takeItem(Item *item);
+    void useItem(Item *item);
     GameObject* clone();
     ~Character();
 
@@ -216,6 +231,10 @@ protected:
     int luaGetMoveStaminaCost(lua_State *state);
     int luaGetBlockStaminaCost(lua_State *state);
     int luaGetSprintStaminaCost(lua_State *state);
+
+    void luaCountHook(lua_State *state, lua_Debug *ar);
+
+    int luaContinuationTest(lua_State *state, int status, lua_KContext ctx);
 
     //attributes
     Action action;

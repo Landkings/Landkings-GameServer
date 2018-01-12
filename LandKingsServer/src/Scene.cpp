@@ -20,7 +20,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
                                                                                              height * 4 /* * Constants::TILE_HEIGHT*/))) {
     tiles.resize(height);
-    spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 1),
+    spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
                                          Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
 
     //add loading map from somewhere or generating
