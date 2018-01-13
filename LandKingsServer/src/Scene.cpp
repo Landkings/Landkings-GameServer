@@ -47,12 +47,9 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    Vec2i direction = findDirection(c1, c2);
-    HitBox attackHitBox(abs(direction.getX() * c1->getAttackRange()), abs(direction.getY() * c1->getAttackRange()));
-    Vec2i newPos = c1->getPosition() + direction;
-    Vec2i attackPosition = c1->getPosition() + direction * (c1->getAttackRange() / 2);
-    if (!isCollide(attackPosition, attackHitBox, c2->getPosition(), c2->getHitbox())) {
-        move(c1, newPos);
+    if (!canAttack(c1, c2)) {
+        Vec2i newPos = c1->getPosition() + findDirection(c1, c2);
+        move(c1, newPos); //TODO: delete
     }
     else {
         if (c1->getNextAttackTime() <= time && c2->getHp() > 0) {
@@ -113,6 +110,7 @@ void Scene::luaPush(lua_State *L) {
 
         luaL_Reg SceneMethods[] = {
             "getObjects", dispatch<Scene, &Scene::luaGetObjects>,
+            "canAttack", dispatch<Scene, &Scene::luaCanAttack>,
             //"test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
         };
@@ -129,23 +127,6 @@ bool Scene::validPosition(const Vec2i &pos, const HitBox &hbox) {
            pos.getY() - (hbox.getHeight() / 2) >= 0 &&
            pos.getX() + (hbox.getWidth() / 2)  < Constants::SCENE_WIDTH &&
            pos.getY() + (hbox.getHeight() / 2) < Constants::SCENE_HEIGHT;
-}
-
-int Scene::luaGetObjects(lua_State *L) {
-    Character* player = *static_cast<Character**>(lua_getextraspace(L));
-    //Scene* Pscene = (Scene*)luaL_checkudata(L, 1, "SceneMetaTable");
-    lua_newtable(L);
-    //std::cout << "Table created" << std::endl;
-    int i = 1;
-    for (auto& object : characters) {
-        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
-            ((Character*)object)->luaPush(L);
-            lua_rawseti(L, -2, i++);
-        }
-        //std::cout << i << " added to table" << std::endl;
-        //lua_pushinteger(L, i++);
-    }
-    return 1;
 }
 
 Vec2i Scene::findDirection(GameObject *from, GameObject *to) {
@@ -187,12 +168,12 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) { //
 bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
     for (auto& object : objects)
         if (object != obj)
-            if (isCollide(obj, object))
+            if (isCollide(*newPos, obj->getHitbox(),  object.getPosition(), object.getHitbox()))
                 return false;
 
     for (auto& character : characters)
         if (character != obj)
-            if (isCollide(obj, character))
+            if (isCollide(*newPos, obj->getHitbox(),  character.getPosition(), character.getHitbox()))
                 return false;
 
     return !checkSceneCollision(obj, newPos);
@@ -214,6 +195,17 @@ void Scene::clearCorpses() {
             characters.erase(characters.begin() + i);
         }
     }
+}
+
+bool Scene::canAttack(Character *c1, Character *c2) {
+    for (int i = 0; i < 4; ++i) {
+        Vec2i direction = directions[i];
+        HitBox attackHitBox(abs(direction.getX() * c1->getAttackRange()), abs(direction.getY() * c1->getAttackRange()));
+        Vec2i attackPosition = c1->getPosition() + direction * (c1->getAttackRange() / 2);
+        if (isCollide(attackPosition, attackHitBox, c2->getPosition(), c2->getHitbox()))
+            return true;
+    }
+    return false;
 }
 
 //Vec2i Scene::getRandomPosition() {
@@ -283,6 +275,25 @@ void Scene::createMapMessage(StringBuffer& buffer) {
     doc.Accept(writer);
 }
 
-//int Scene::test(lua_State *L) {
-//    std::cout << testIdx++ << std::endl;
-//}
+//lua methods
+
+int Scene::luaGetObjects(lua_State *L) {
+    Character* player = *static_cast<Character**>(lua_getextraspace(L));
+    lua_newtable(L);
+    int i = 1;
+    for (auto& object : characters) {
+        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
+            ((Character*)object)->luaPush(L);
+            lua_rawseti(L, -2, i++);
+        }
+        //lua_pushinteger(L, i++);
+    }
+    return 1;
+}
+
+int Scene::luaCanAttack(lua_State *state) {
+    Character* player = *static_cast<Character**>(lua_getextraspace(state));
+    Character* target = (Character*)lua_touserdata(state, -1);
+    lua_pushboolean(state, canAttack(player, target));
+    return 1;
+}

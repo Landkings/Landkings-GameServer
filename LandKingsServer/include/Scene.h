@@ -39,7 +39,6 @@ public:
     bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
-    int luaGetObjects(lua_State *L);
     Vec2i findDirection(GameObject *from, GameObject *to);
     bool isCollide(const GameObject *first, const GameObject *second);
     bool isCollide(const Vec2i firstPos, const HitBox firstHitBox, const Vec2i secondPos, const HitBox secondHitBox);
@@ -47,6 +46,12 @@ private:
     bool checkSceneCollision(const GameObject *obj, const Vec2i *newPos);
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
+    bool canAttack(Character *c1, Character *c2);
+
+    //lua methods
+    int luaGetObjects(lua_State *L);
+    int luaCanAttack(lua_State *L);
+
     //Vec2i getRandomPosition();
     std::vector<GameObject*> objects;
     std::vector<Character*> characters;

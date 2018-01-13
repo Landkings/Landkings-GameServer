@@ -264,6 +264,7 @@ protected:
     int moveStaminaCost;
     int blockStaminaCost; //maybe delete
     int sprintStaminaCost;
+    int level;
     SpriteDirection spriteDirection;
     Inventory inventory;
     lua_State *L;

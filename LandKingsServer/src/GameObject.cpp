@@ -29,13 +29,14 @@ void Character::update() {
     //lua_
     int res = lua_pcallk(L, 1, 0, 0, ctx, &dispatchContinuation<Character, &Character::luaContinuationTest>);
     if (res != LUA_OK) {
-        std::cout << "Status: " << lua_status(L) << std::endl;
+        //std::cout << "Status: " << lua_status(L) << std::endl;
         //std::cout << "Error running function f: " << lua_tostring(L, -1) << std::endl;
         //lua_tostring(L, -1);
         if (res == LUA_YIELD)
-            std::cout << "We yielded" << std::endl;
+            ;
+            //std::cout << "We yielded" << std::endl;
         else {
-            std::cout << "Something different occured. res = " << res << std::endl;
+            //std::cout << "Something different occured. res = " << res << std::endl;
         }
         lua_pop(L, 1);
         return;
