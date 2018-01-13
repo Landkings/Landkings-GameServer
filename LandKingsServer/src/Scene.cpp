@@ -168,12 +168,12 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) { //
 bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
     for (auto& object : objects)
         if (object != obj)
-            if (isCollide(*newPos, obj->getHitbox(),  object.getPosition(), object.getHitbox()))
+            if (isCollide(*newPos, obj->getHitbox(),  object->getPosition(), object->getHitbox()))
                 return false;
 
     for (auto& character : characters)
         if (character != obj)
-            if (isCollide(*newPos, obj->getHitbox(),  character.getPosition(), character.getHitbox()))
+            if (isCollide(*newPos, obj->getHitbox(),  character->getPosition(), character->getHitbox()))
                 return false;
 
     return !checkSceneCollision(obj, newPos);
