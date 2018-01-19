@@ -94,7 +94,14 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
     }
     else {
         player = (Character*)getPlayer(playerName);
-        player->loadLuaCode(luaCode);
+        if (player)
+            player->loadLuaCode(luaCode);
+        else {
+            player = (Character*)characterSpawner->spawn(characters);
+            player->loadLuaCode(luaCode);
+            player->setName(playerName);
+            players.insert(playerName);
+        }
     }
     objectsMutex.unlock();
 }
@@ -207,10 +214,6 @@ bool Scene::canAttack(Character *c1, Character *c2) {
     }
     return false;
 }
-
-//Vec2i Scene::getRandomPosition() {
-//    return Vec2i(100 + 40 * characters.size(), 100); //TODO: add randomness
-//}
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
     objectsMutex.lock();
