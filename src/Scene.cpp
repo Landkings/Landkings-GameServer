@@ -88,8 +88,8 @@ void Scene::update() {
         }
     }
     clearCorpses();
-    objectsMutex.unlock();
     ++time;
+    objectsMutex.unlock();
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -212,6 +212,14 @@ void Scene::clearCorpses() {
 
 void Scene::restart() {
     delete safeZone;
+    for (int i = 0; i < characters.size(); ++i)
+        delete characters[i];
+
+    for (int i = 0; i < objects.size(); ++i)
+        delete objects[i];
+
+    characters.clear();
+    objects.clear();
     safeZone = new SafeZone(this, Vec2i(0, 0));
     for (auto& player : players) {
         Character *obj = (Character*)characterSpawner->spawn(characters);
