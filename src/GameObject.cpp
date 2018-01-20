@@ -244,6 +244,8 @@ void Character::init() {
     nextLevelExp = 500;
     skillPoints = 0;
     currentExp = 0;
+    for (int i = 0; i < (int)Parameters::Size; ++i)
+        parameters[(Parameters)i] = 0;
     initLuaState();
 }
 
