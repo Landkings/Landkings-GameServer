@@ -113,6 +113,7 @@ void Character::move(Vec2i newPos) {
 
     position = newPos;
     isStaminaRegenAvailable = false;
+    maxStaminaTicks = 0;
     switch(movementType) {
     case MovementType::Sprint:
        nextMoveTime = scene->getTime() + getMoveCooldown() / 2;
@@ -186,7 +187,7 @@ void Character::useItem(Item *item) {
 
 void Character::gainExp(int amount) {
     currentExp += amount;
-    while (currentExp < nextLevelExp) {
+    while (currentExp >= nextLevelExp) {
         currentExp -= nextLevelExp;
         ++level;
         ++skillPoints;

@@ -210,7 +210,7 @@ public:
     const int getDamage() { return damage + 1 * parameters[Parameters::AttackDamage]; } //TODO: replace with constant
     void setDirection(const Direction dir) { direction = dir; }
     void setTarget (const GameObject *targ) { target = targ; }
-    const int getMoveCooldown() { return moveCooldown - 1 * parameters[Parameters::MovementSpeed]; } //TODO: replace with constant
+    const int getMoveCooldown() { return moveCooldown - 1 * (bool)parameters[Parameters::MovementSpeed]; } //TODO: replace with constant
     const int getAttackCooldown() { return attackCooldown - 10 * parameters[Parameters::AttackSpeed]; } //TODO: replace with constant
     long long getNextMoveTime() const { return nextMoveTime; }    
     long long getNextAttackTime() const {return nextAttackTime; }
