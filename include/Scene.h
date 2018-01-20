@@ -7,7 +7,7 @@
 #include <map>
 #include <unordered_map>
 
-#include "stringbuffer.h"
+#include <rapidjson/stringbuffer.h>
 
 #include "Constants.h"
 #include "lua.hpp"
