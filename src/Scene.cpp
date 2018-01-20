@@ -20,7 +20,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     time(0),
     characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
                                                                                              height * 4 /* * Constants::TILE_HEIGHT*/))),
-    safeZone(new SafeZone(this, 1000, Vec2i(0, 0))) {
+    safeZone(new SafeZone(this, Vec2i(0, 0))) {
     tiles.resize(height);
     spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
                                          Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
@@ -66,10 +66,16 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
+    if (characters.size() == 0) {
+        objectsMutex.unlock();
+        restart();
+        return;
+    }
     safeZone->update();
     for (auto& spawner : spawners) {
         //spawner.second->spawn(objects);
     }
+
     for (auto& character : characters) {
         if (character->getNextStaminaRegenTime() <= time)
             character->gainDefaultStamina();
@@ -77,7 +83,7 @@ void Scene::update() {
         if (!character->isOnCooldown())
             character->update();
 
-        if (!safeZone->inZone(character)) {
+        if (!(getTime() % 1000) && !safeZone->inZone(character)) {
             character->takeDamage(1);
         }
     }
@@ -98,7 +104,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         player = (Character*)characterSpawner->spawn(characters);
         player->loadLuaCode(luaCode);
         player->setName(playerName);
-        players.insert(playerName);
+        players.insert(std::make_pair(playerName, luaCode));
         //characters.push_back(player);
     }
     else {
@@ -203,6 +209,16 @@ void Scene::clearCorpses() {
             characters.erase(characters.begin() + i);
         }
     }
+}
+
+void Scene::restart() {
+    objectsMutex.lock();
+    for (auto& player : players) {
+        Character *obj = (Character*)characterSpawner->spawn(characters);
+        obj->loadLuaCode(player.second);
+        obj->setName(player.first);
+    }
+    objectsMutex.unlock();
 }
 
 bool Scene::canAttack(Character *c1, Character *c2) {

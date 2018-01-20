@@ -4,6 +4,7 @@
 #include <memory>
 #include <mutex>
 #include <set>
+#include <map>
 #include <unordered_map>
 
 #include "stringbuffer.h"
@@ -49,6 +50,7 @@ private:
     bool checkSceneCollision(const GameObject *obj, const Vec2i *newPos);
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
+    void restart();
     bool canAttack(Character *c1, Character *c2);
 
     //lua methods
@@ -58,7 +60,7 @@ private:
     //Vec2i getRandomPosition();
     std::vector<GameObject*> objects;
     std::vector<Character*> characters;
-    std::set<std::string> players;
+    std::map<std::string, std::string> players;
     TileMap tiles;
     int height;
     int width;

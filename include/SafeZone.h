@@ -15,12 +15,12 @@ public:
 class SafeZone {
 public:
     SafeZone() {}
-    SafeZone(Scene* scene, int nextZoneTime, Vec2i spawnPosition, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
-            ZoneTier(1000, 0, 10000),
-            ZoneTier(1000, 1000, 100)
+    SafeZone(Scene* scene, Vec2i spawnPosition, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
+            ZoneTier(10000, 0, 10000),
+            ZoneTier(10000, 10000, 100)
         }) :
         scene(scene),
-        nextZoneTime(nextZoneTime),
+        nextZoneTime(zoneTiers[0].stayTime),
         zoneTiers(zoneTiers),
         lastPosition(spawnPosition),
         position(spawnPosition),
