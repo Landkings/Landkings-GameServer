@@ -163,6 +163,7 @@ void Character::gainStamina(int amount) {
 void Character::gainDefaultStamina() {
     if (!isStaminaHpRegenAvailable && stamina == maxStamina && ++maxStaminaTicks >= maxStaminaTicksRequirement)
         isStaminaHpRegenAvailable = true;
+
     if (isStaminaRegenAvailable) {
         gainStamina(getMoveStaminaCost()); //maybe replace stamina cost
         nextStaminaRegenTime = scene->getTime() + moveCooldown; //maybe replace movecooldown

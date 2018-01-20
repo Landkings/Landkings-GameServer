@@ -79,11 +79,13 @@ void Scene::update() {
     for (auto& character : characters) {
         if (character->getNextStaminaRegenTime() <= time)
             character->gainDefaultStamina();
+        character->enableStaminaRegen();
 
         if (!character->isOnCooldown())
             character->update();
 
-        if (!(getTime() % 10) && !safeZone->inZone(character)) {
+        if (!(getTime() % 500) && !safeZone->inZone(character)) {
+            character->disableStaminaRegen();
             character->takeDamage(1);
         }
     }

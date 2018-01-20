@@ -227,6 +227,8 @@ public:
     const int getBlockStaminaCost() const { return blockStaminaCost; }
     const int getSprintStaminaCost() const { return sprintStaminaCost; }
     const int getLevel() { return level; }
+    void disableStaminaRegen() { isStaminaRegenAvailable = false; }
+    void enableStaminaRegen() { isStaminaHpRegenAvailable = true; }
 protected:
     void init();
     void initLuaState();
