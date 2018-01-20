@@ -113,11 +113,11 @@ void Character::move(Vec2i newPos) {
     position = newPos;
     switch(movementType) {
     case MovementType::Sprint:
-       nextMoveTime = scene->getTime() + moveCooldown / 2;
+       nextMoveTime = scene->getTime() + getMoveCooldown() / 2;
        loseStamina(getSprintStaminaCost());
        break;
     case MovementType::Default:
-       nextMoveTime = scene->getTime() + moveCooldown;
+       nextMoveTime = scene->getTime() + getMoveCooldown();
        loseStamina(getMoveStaminaCost());
        break;
     }
