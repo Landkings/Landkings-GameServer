@@ -3,6 +3,7 @@
 #include "Scene.h"
 #include "Vec2i.h"
 #include "GameObject.h"
+#include "LuaHelper.h"
 
 namespace Engine {
 
@@ -30,6 +31,8 @@ public:
     void luaPush(lua_State *state);
     bool inZone(Character *player);
 private:
+    int luaGetPosition(lua_State *state);
+    int luaGetRadius(lua_State *state);
     Vec2i genNextPosition();
     std::vector<ZoneTier> zoneTiers;
     Scene *scene;

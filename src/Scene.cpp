@@ -66,7 +66,7 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
-    if (characters.size() == 0) {
+    if (characters.size() == 1) {
         objectsMutex.unlock();
         restart();
         return;
@@ -318,5 +318,10 @@ int Scene::luaCanAttack(lua_State *state) {
     Character* player = *static_cast<Character**>(lua_getextraspace(state));
     Character* target = (Character*)lua_touserdata(state, -1);
     lua_pushboolean(state, canAttack(player, target));
+    return 1;
+}
+
+int Scene::luaGetSafeZone(lua_State *state) {
+    safeZone->luaPush(state);
     return 1;
 }

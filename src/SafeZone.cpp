@@ -22,11 +22,35 @@ void Engine::SafeZone::update() {
 }
 
 void Engine::SafeZone::luaPush(lua_State *state) {
+    SafeZone **Pzone = (SafeZone**)lua_newuserdata(state, sizeof(SafeZone*));
+    *Pzone = this;
+    if (luaL_newmetatable(state, "SafeZoneMetaTable")) {
+        lua_pushvalue(state, -1);
+        lua_setfield(state, -2, "__index");
 
+        luaL_Reg SafeZoneMethods[] = {
+            "getPosition", &dispatch<SafeZone, &SafeZone::luaGetPosition>,
+            "getRadius", &dispatch<SafeZone, &SafeZone::luaGetRadius>,
+            nullptr, nullptr
+        };
+        luaL_setfuncs(state, SafeZoneMethods, 0);
+    }
+    lua_setmetatable(state, -2);
 }
 
 bool Engine::SafeZone::inZone(Engine::Character *player) {
     return (player->getPosition() - position).abs() <= zoneTiers[currentZoneTier].radius;
+}
+
+int SafeZone::luaGetPosition(lua_State *state) {
+    position.luaPush(state);
+    return 1;
+}
+
+int SafeZone::luaGetRadius(lua_State *state) {
+    lua_pushinteger(state, (int)(zoneTiers[currentZoneTier].radius * ((nextZoneTime - zoneTiers[currentZoneTier].stayTime - scene->getTime()) /
+                                                       ((double)zoneTiers[currentZoneTier].shrinkTime))));
+    return 1;
 }
 
 Vec2i SafeZone::genNextPosition() {

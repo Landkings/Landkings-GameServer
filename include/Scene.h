@@ -56,6 +56,7 @@ private:
     //lua methods
     int luaGetObjects(lua_State *L);
     int luaCanAttack(lua_State *L);
+    int luaGetSafeZone(lua_State *state);
 
     //Vec2i getRandomPosition();
     std::vector<GameObject*> objects;
