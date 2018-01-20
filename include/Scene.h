@@ -38,6 +38,8 @@ public:
     void createObjectsMessage(rapidjson::StringBuffer& buffer);
     void createMapMessage(rapidjson::StringBuffer& buffer);
     bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
+    const int getWidth() { return width * Constants::TILE_WIDTH; }
+    const int getHeight() { return height * Constants::TILE_HEIGHT; }
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);

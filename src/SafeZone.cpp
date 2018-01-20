@@ -31,7 +31,7 @@ bool Engine::SafeZone::inZone(Engine::Character *player) {
 
 Vec2i SafeZone::genNextPosition() {
     int radius = zoneTiers[currentZoneTier].radius;
-    return Vec2i( position.getX() + (std::rand() % (2 * radius) - radius),
-                  position.getY() + (std::rand() % (2 * radius) - radius));
+    return Vec2i( (position.getX() + (std::rand() % (2 * radius) - radius)) % scene->getWidth(),
+                  position.getY() + (std::rand() % (2 * radius) - radius) % scene->getHeight());
 }
 }
