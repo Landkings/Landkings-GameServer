@@ -1,6 +1,7 @@
 #include "Scene.h"
 #include "GameObject.h"
 #include "ObjectSpawner.h"
+#include "SafeZone.h"
 
 #include <iomanip>
 
@@ -18,7 +19,8 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
     characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
-                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/))) {
+                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/))),
+    safeZone(new SafeZone(this, 1000, Vec2i(0, 0))) {
     tiles.resize(height);
     spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
                                          Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
@@ -64,6 +66,7 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
+    safeZone->update();
     for (auto& spawner : spawners) {
         //spawner.second->spawn(objects);
     }
@@ -73,7 +76,12 @@ void Scene::update() {
 
         if (!character->isOnCooldown())
             character->update();
+
+        if (!safeZone->inZone(character)) {
+            character->takeDamage(1);
+        }
     }
+
     clearCorpses();
     objectsMutex.unlock();
     ++time;
@@ -229,6 +237,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
         player.AddMember("mhp", character->getMaxHp(), allc);
         player.AddMember("mst", character->getMaxStamina(), allc);
         player.AddMember("sid", (int)character->getSpriteDirection(), allc);
+        player.AddMember("lv", character->getLevel(), allc);
         nick.SetString(character->getID().data(), allc);
         player.AddMember("id", nick, allc);
         players.PushBack(player, allc);

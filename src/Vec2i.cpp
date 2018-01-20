@@ -24,6 +24,10 @@ Vec2i Engine::Vec2i::operator*(int val) {
     return Vec2i(x * val, y * val);
 }
 
+Vec2i Engine::Vec2i::operator*(double val) {
+    return Vec2i(x * val, y * val);
+}
+
 Vec2i Vec2i::operator =(const Vec2i &right) {
     x = right.x;
     y = right.y;

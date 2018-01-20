@@ -222,10 +222,11 @@ public:
     AttackDirection getBlockDirection() const { return blockDirection; }
     AttackDirection getAttackDirection() const { return attackDirection; }
     long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
-    int getAttackStaminaCost() const { return attackStaminaCost; }
-    int getMoveStaminaCost() const { return moveStaminaCost; }
-    int getBlockStaminaCost() const { return blockStaminaCost; }
-    int getSprintStaminaCost() const { return sprintStaminaCost; }
+    const int getAttackStaminaCost() const { return attackStaminaCost; }
+    const int getMoveStaminaCost() const { return moveStaminaCost; }
+    const int getBlockStaminaCost() const { return blockStaminaCost; }
+    const int getSprintStaminaCost() const { return sprintStaminaCost; }
+    const int getLevel() { return level; }
 protected:
     void init();
     void initLuaState();

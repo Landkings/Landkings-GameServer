@@ -17,6 +17,7 @@ public:
     Vec2i operator + (const Vec2i& right);
     Vec2i operator - (const Vec2i& right);
     Vec2i operator * (int val);
+    Vec2i operator * (double val);
     Vec2i operator = (const Vec2i& right);
     double abs();
     void luaPush(lua_State *state);

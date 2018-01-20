@@ -22,6 +22,7 @@ using TileMap = std::vector<std::vector<Tile*>>;
 class Character;
 class Item;
 class ObjectSpawner;
+class SafeZone;
 
 class Scene {
 public:
@@ -65,6 +66,7 @@ private:
     Tile land;
     Tile wall;
     Tile grass;
+    SafeZone *safeZone;
     std::unordered_map<std::string, ObjectSpawner*> spawners;
     ObjectSpawner *characterSpawner;
 };
