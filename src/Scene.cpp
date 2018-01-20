@@ -83,7 +83,7 @@ void Scene::update() {
         if (!character->isOnCooldown())
             character->update();
 
-        if (!(getTime() % 1000) && !safeZone->inZone(character)) {
+        if (!(getTime() % 10) && !safeZone->inZone(character)) {
             character->takeDamage(1);
         }
     }
@@ -213,6 +213,8 @@ void Scene::clearCorpses() {
 
 void Scene::restart() {
     objectsMutex.lock();
+    delete safeZone;
+    safeZone = new SafeZone(this, Vec2i(0, 0));
     for (auto& player : players) {
         Character *obj = (Character*)characterSpawner->spawn(characters);
         obj->loadLuaCode(player.second);
