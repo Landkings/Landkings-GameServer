@@ -288,6 +288,7 @@ protected:
     int attackCooldown;
     int visionRange;
     bool isStaminaHpRegenAvailable;
+    bool isStaminaRegenAvailable;
     int maxStaminaTicksRequirement;
     int maxStaminaTicks;
     int attackStaminaCost;

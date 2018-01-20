@@ -41,7 +41,8 @@ void Character::update() {
         lua_pop(L, 1);
         return;
     }
-    isStaminaHpRegenAvailable = false;
+    isStaminaRegenAvailable = true;
+    isStaminaHpRegenAvailable = true;
     maxStaminaTicks = 0;
     switch(action) {
     case Action::Move:
@@ -111,6 +112,7 @@ void Character::move(Vec2i newPos) {
         spriteDirection = SpriteDirection::Down;
 
     position = newPos;
+    isStaminaRegenAvailable = false;
     switch(movementType) {
     case MovementType::Sprint:
        nextMoveTime = scene->getTime() + getMoveCooldown() / 2;
@@ -118,7 +120,7 @@ void Character::move(Vec2i newPos) {
        break;
     case MovementType::Default:
        nextMoveTime = scene->getTime() + getMoveCooldown();
-       loseStamina(getMoveStaminaCost());
+       //loseStamina(getMoveStaminaCost());
        break;
     }
 }
@@ -160,8 +162,10 @@ void Character::gainStamina(int amount) {
 void Character::gainDefaultStamina() {
     if (!isStaminaHpRegenAvailable && stamina == maxStamina && ++maxStaminaTicks >= maxStaminaTicksRequirement)
         isStaminaHpRegenAvailable = true;
-    gainStamina(getMoveStaminaCost()); //maybe replace stamina cost
-    nextStaminaRegenTime = scene->getTime() + moveCooldown; //maybe replace movecooldown
+    if (isStaminaRegenAvailable) {
+        gainStamina(getMoveStaminaCost()); //maybe replace stamina cost
+        nextStaminaRegenTime = scene->getTime() + moveCooldown; //maybe replace movecooldown
+    }
 }
 
 void Character::gainHp(int amount) {
@@ -231,6 +235,7 @@ void Character::init() {
     maxStaminaTicks = 0;
     maxStaminaTicksRequirement = attackCooldown + 100;
     isStaminaHpRegenAvailable = true;
+    isStaminaRegenAvailable = true;
     attackStaminaCost = 25;
     moveStaminaCost = 1;
     sprintStaminaCost = 2;
