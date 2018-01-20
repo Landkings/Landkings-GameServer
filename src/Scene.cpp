@@ -84,9 +84,10 @@ void Scene::update() {
         if (!character->isOnCooldown())
             character->update();
 
-        if (!(getTime() % 500) && !safeZone->inZone(character)) {
+        if (!safeZone->inZone(character)) {
+            if (getTime() % 500)
+                character->takeDamage(1);
             character->disableStaminaRegen();
-            character->takeDamage(1);
         }
     }
     clearCorpses();
