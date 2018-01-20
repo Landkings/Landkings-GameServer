@@ -20,7 +20,7 @@ public:
             ZoneTier(10000, 10000, 100)
         }) :
         scene(scene),
-        nextZoneTime(zoneTiers[0].stayTime),
+        nextZoneTime(scene->getTime() + zoneTiers[0].stayTime),
         zoneTiers(zoneTiers),
         lastPosition(spawnPosition),
         position(spawnPosition),
