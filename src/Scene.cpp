@@ -85,7 +85,7 @@ void Scene::update() {
             character->update();
 
         if (!safeZone->inZone(character)) {
-            if (getTime() % 500)
+            if (!(getTime() % 500))
                 character->takeDamage(1);
             character->disableStaminaRegen();
         }
