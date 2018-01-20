@@ -66,7 +66,7 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
-    if (characters.size() == 1) {
+    if (characters.size() <= 1) {
         restart();
         objectsMutex.unlock();
         return;
