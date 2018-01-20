@@ -9,8 +9,8 @@ namespace Engine {
   lua_pushnumber(L, val); \
   lua_settable(L, -3);
 
-#define C_ENUM_HELPER(cname, luaname)  cname,
-#define LUA_ENUM_HELPER(cname, luaname) LUA_ENUM(L, luaname, cname)
+#define C_ENUM_HELPER(cname, luaname, enum_name)  cname,
+#define LUA_ENUM_HELPER(cname, luaname, enum_name) LUA_ENUM(L, luaname, (int)enum_name::cname)
 #define C_ENUM_TO_STRING_HELPER(cname, luaname) { cname, #luaname },
 
 template<class T>

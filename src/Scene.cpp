@@ -23,7 +23,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
                                          Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
 
-    //add loading map from somewhere or generating
+    //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
     for (auto& row : tiles) {
         //row.resize(width, (k++ % 2) ? &land : &grass);
@@ -36,7 +36,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
 void Scene::move(GameObject *object, const Vec2i &newPos) {
     if (((Character*)object)->getNextMoveTime() <= time && validPosition(newPos, object->getHitbox())) {
         //((Character*)object)->setNextMoveTime();
-        if (checkAllCollisions(object, &newPos))
+        if (!checkAllCollisions(object, &newPos))
             ((Character*)object)->move(newPos);
     }
 }
@@ -57,6 +57,7 @@ void Scene::attack(Character *c1, Character *c2) {
         } //Shouldn't be else, since it checks hp after attack
         if (c2->getHp() <= 0) {
             c1->setTarget(nullptr);
+            c1->gainExp(c2->getExpValue());
         }
     }
 }
@@ -85,7 +86,7 @@ void Scene::addObject(GameObject *obj) {
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
     objectsMutex.lock();
-    if (players.find(playerName) == players.end()) {
+    if (players.find(playerName) == players.end() || !(player = (Character*)getPlayer(playerName))) {
         player = (Character*)characterSpawner->spawn(characters);
         player->loadLuaCode(luaCode);
         player->setName(playerName);
@@ -93,15 +94,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         //characters.push_back(player);
     }
     else {
-        player = (Character*)getPlayer(playerName);
-        if (player)
-            player->loadLuaCode(luaCode);
-        else {
-            player = (Character*)characterSpawner->spawn(characters);
-            player->loadLuaCode(luaCode);
-            player->setName(playerName);
-            players.insert(playerName);
-        }
+        player->loadLuaCode(luaCode);
     }
     objectsMutex.unlock();
 }
@@ -155,13 +148,13 @@ bool Scene::isCollide(const Vec2i firstPos, const HitBox firstHitBox, const Vec2
 }
 
 bool Scene::isCollide(const Vec2i firstPos, const int firstWidth, const int firstHeight, const Vec2i secondPos, const int secondWidth, const int secondHeight) {
-    return firstPos.getX() < secondPos.getX() + secondWidth &&
-           firstPos.getX() + firstWidth > secondPos.getX() &&
-           firstPos.getY() < secondPos.getY() + secondHeight &&
-           firstPos.getY() + firstHeight > secondPos.getY();
+    return ((firstPos.getX() - secondPos.getX()) < (secondWidth + firstWidth) / 2) &&
+           ((secondPos.getX() - firstPos.getX()) < (firstWidth + secondWidth) / 2) &&
+           ((firstPos.getY() - secondPos.getY()) < (secondHeight + firstHeight) / 2) &&
+           ((secondPos.getY() - firstPos.getY()) < (firstHeight + secondHeight) / 2);
 }
 
-bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) { //TODO AABB tree optimization
+bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) {
     for (int i = (newPos->getY() - obj->getHeight() / 2) / Constants::TILE_HEIGHT;
          i <= (newPos->getY() + obj->getHeight() / 2) / Constants::TILE_HEIGHT; ++i)
         for (int j = (newPos->getX() - obj->getWidth() / 2) / Constants::TILE_WIDTH;
@@ -176,14 +169,14 @@ bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
     for (auto& object : objects)
         if (object != obj)
             if (isCollide(*newPos, obj->getHitbox(),  object->getPosition(), object->getHitbox()))
-                return false;
+                return true;
 
     for (auto& character : characters)
         if (character != obj)
             if (isCollide(*newPos, obj->getHitbox(),  character->getPosition(), character->getHitbox()))
-                return false;
+                return true;
 
-    return !checkSceneCollision(obj, newPos);
+    return checkSceneCollision(obj, newPos);
 }
 
 GameObject *Scene::getPlayer(std::string &playerName) {

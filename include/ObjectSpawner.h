@@ -26,7 +26,7 @@ public:
         if ((lastSpawn + spawnCoolDown <= scene->getTime() && objectsCount < objectsLimit) || objectsLimit < 0 || spawnCoolDown < 0) {
             ++objectsCount;
             Vec2i finalPosition = getRandomPosition();
-            while (!scene->checkAllCollisions(prototype, &finalPosition))
+            while (scene->checkAllCollisions(prototype, &finalPosition))
                 finalPosition = getRandomPosition(); //implement better logic
             newObj = prototype->clone();
             newObj->setPosition(finalPosition);

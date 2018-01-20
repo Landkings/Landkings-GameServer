@@ -14,62 +14,83 @@
 namespace Engine {
 
 #define ACTION \
-  E(Move, Move) \
-  E(Attack, Attack) \
-  E(Block, Block) \
-  E(Empty, Empty) \
+  E(Move, Move, Action) \
+  E(Attack, Attack, Action) \
+  E(Block, Block, Action) \
+  E(Empty, Empty, Action)
 
 #define DIRECTION \
-  E(Up, Up) \
-  E(Right, Right) \
-  E(Down, Down) \
-  E(Left, Left) \
-  E(Unknown, Unknown) \
+  E(Up, Up, Direction) \
+  E(Right, Right, Direction) \
+  E(Down, Down, Direction) \
+  E(Left, Left, Direction) \
+  E(Unknown, Unknown, Direction)
 
 #define ATTACK_TYPE \
-  E(Fast, Fast) \
-  E(Strong, Strong) \
+  E(Fast, Fast, AttackType) \
+  E(Strong, Strong, AttackType)
 
 #define ATTACK_DIRECTION \
-  E(Head, Head) \
-  E(Torso, Torso) \
-  E(Legs, Legs) \
+  E(Head, Head, AttackDirection) \
+  E(Torso, Torso, AttackDirection) \
+  E(Legs, Legs, AttackDirection)
 
 #define MOVEMENT_TYPE \
-  E(Default, Default) \
-  E(Sprint, Sprint) \
+  E(Default, Default, MovementType) \
+  E(Sprint, Sprint, MovementType)
+
+#define PARAMETERS \
+    E(MovementSpeed, MovementSpeed, Parameters) \
+    E(AttackSpeed, AttackSpeed, Parameters) \
+    E(AttackRange, AttackRange, Parameters) \
+    E(HitPoints, HitPoints, Parameters) \
+    E(StaminaPoints, StaminaPoints, Parameters) \
+    E(AttackDamage, AttackDamage, Parameters) \
+    E(VisionRange, VisionRange, Parameters) \
+    E(StaminaCostReduction, StaminaCostReduction, Parameters) \
+    E(StaminaRegenFrequency, StaminaRegenFrequency, Parameters)
 
 #define E C_ENUM_HELPER
-enum Action {
+enum class Action {
     ACTION
+    Size
 };
 
-enum Direction {
+enum class Direction {
     DIRECTION
+    Size
 };
 
-enum AttackType {
+enum class AttackType {
     ATTACK_TYPE
+    Size
 };
 
-enum MovementType {
+enum class MovementType {
     MOVEMENT_TYPE
+    Size
 };
 
-enum AttackDirection {
+enum class AttackDirection {
     ATTACK_DIRECTION
+    Size
+};
+
+enum class Parameters {
+    PARAMETERS
+    Size
 };
 #undef E
 
-#define E C_ENUM_TO_STRING_HELPER
-static std::map<Action, std::string> actionStrings = {
-    ACTION
-};
-
-static std::map<Direction, std::string> directionStrings = {
-    DIRECTION
-};
-#undef E
+//#define E C_ENUM_TO_STRING_HELPER
+//static std::map<Action, std::string> actionStrings = {
+//    ACTION
+//};
+//
+//static std::map<Direction, std::string> directionStrings = {
+//    DIRECTION
+//};
+//#undef E
 
 enum class SpriteDirection {
     Up = 0,
@@ -101,6 +122,7 @@ public:
     virtual std::string getID() const { return name; }
     virtual bool isPassable() { return false; }
     virtual GameObject* clone() = 0;
+    virtual void luaPush(lua_State *state) = 0;
 protected:
     Vec2i position;
     HitBox hbox;
@@ -130,7 +152,6 @@ public:
     virtual int getActionCooldown() const { return actionCooldown; }
     //virtual void collect(Character* target);
     virtual bool inInventory() const { return isInInventory; }
-    virtual void luaPush(lua_State *state) = 0;
 protected:
     int maxCharges;
     int consumedCharges;
@@ -161,7 +182,7 @@ public:
     Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
     //int write(lua_State *state);
     void update();
-    void luaPush(lua_State *state);
+    void luaPush(lua_State *state) override;
     void attack(Character *target);
     void move(Vec2i newPos);
     void takeDamage(int amount);
@@ -174,6 +195,8 @@ public:
     void block(int amount);
     void takeItem(Item *item);
     void useItem(Item *item);
+    void gainExp(int amount);
+    int getExpValue();
     GameObject* clone();
     ~Character();
 
@@ -181,19 +204,20 @@ public:
     int getSpeed() const { return speed; }
     int getHp() const { return hitPoints; }
     void setHp(const int hp) { hitPoints = hp; }
-    int getMaxHp() const { return maxHitPoints; }
-    int getStamina() const { return stamina; }
-    int getMaxStamina() const { return maxStamina; }
-    int getDamage() const { return damage; }
+    const int getMaxHp() { return maxHitPoints + 10 * parameters[Parameters::HitPoints]; } //TODO: replace with constant
+    const int getStamina() { return stamina; }
+    const int getMaxStamina() { return maxStamina + 10 * parameters[Parameters::StaminaPoints]; } //TODO: replace with constant
+    const int getDamage() { return damage + 1 * parameters[Parameters::AttackDamage]; } //TODO: replace with constant
     void setDirection(const Direction dir) { direction = dir; }
     void setTarget (const GameObject *targ) { target = targ; }
-    int getMoveCooldown() const { return moveCooldown; }
+    const int getMoveCooldown() { return moveCooldown - 1 * parameters[Parameters::MovementSpeed]; } //TODO: replace with constant
+    const int getAttackCooldown() { return attackCooldown - 10 * parameters[Parameters::AttackSpeed]; } //TODO: replace with constant
     long long getNextMoveTime() const { return nextMoveTime; }    
     long long getNextAttackTime() const {return nextAttackTime; }
-    int getVisionRange() const { return visionRange; }
+    const int getVisionRange() { return visionRange + 50 * parameters[Parameters::VisionRange]; }
     SpriteDirection getSpriteDirection() const { return spriteDirection; }
     bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
-    int getAttackRange() const { return attackRange; }
+    const int getAttackRange() { return attackRange + 5 * parameters[Parameters::AttackRange]; } //TODO: replace with constants
     AttackType getAttackType() const { return attackType; }
     AttackDirection getBlockDirection() const { return blockDirection; }
     AttackDirection getAttackDirection() const { return attackDirection; }
@@ -231,6 +255,12 @@ protected:
     int luaGetMoveStaminaCost(lua_State *state);
     int luaGetBlockStaminaCost(lua_State *state);
     int luaGetSprintStaminaCost(lua_State *state);
+    int luaLevelUp(lua_State *state);
+    int luaGetAvailableSkillPoints(lua_State *state);
+    int luaGetCurrentExp(lua_State *state);
+    int luaGetNextLevelExp(lua_State *state);
+    int luaGetParameterLevel(lua_State *state);
+    int luaGetParameterLevelUpCost(lua_State *state);
 
     void luaCountHook(lua_State *state, lua_Debug *ar);
 
@@ -265,6 +295,10 @@ protected:
     int blockStaminaCost; //maybe delete
     int sprintStaminaCost;
     int level;
+    int nextLevelExp;
+    int currentExp;
+    int skillPoints;
+    std::unordered_map<Parameters, int> parameters;
     SpriteDirection spriteDirection;
     Inventory inventory;
     lua_State *L;
