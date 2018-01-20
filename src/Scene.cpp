@@ -127,7 +127,7 @@ void Scene::luaPush(lua_State *L) {
         luaL_Reg SceneMethods[] = {
             "getObjects", dispatch<Scene, &Scene::luaGetObjects>,
             "canAttack", dispatch<Scene, &Scene::luaCanAttack>,
-            "getSafeZone", distapch<Scene, &Scene::luaGetSafeZone>,
+            "getSafeZone", dispatch<Scene, &Scene::luaGetSafeZone>,
             //"test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
         };
