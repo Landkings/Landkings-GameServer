@@ -67,8 +67,8 @@ void Scene::attack(Character *c1, Character *c2) {
 void Scene::update() {
     objectsMutex.lock();
     if (characters.size() == 1) {
-        objectsMutex.unlock();
         restart();
+        objectsMutex.unlock();
         return;
     }
     safeZone->update();
@@ -87,7 +87,6 @@ void Scene::update() {
             character->takeDamage(1);
         }
     }
-
     clearCorpses();
     objectsMutex.unlock();
     ++time;
@@ -212,7 +211,6 @@ void Scene::clearCorpses() {
 }
 
 void Scene::restart() {
-    objectsMutex.lock();
     delete safeZone;
     safeZone = new SafeZone(this, Vec2i(0, 0));
     for (auto& player : players) {
@@ -220,7 +218,6 @@ void Scene::restart() {
         obj->loadLuaCode(player.second);
         obj->setName(player.first);
     }
-    objectsMutex.unlock();
 }
 
 bool Scene::canAttack(Character *c1, Character *c2) {
