@@ -5,9 +5,9 @@
 
 #include <iomanip>
 
-#include "document.h"
-#include "writer.h"
-#include "stringbuffer.h"
+#include <rapidjson/document.h>
+#include <rapidjson/writer.h>
+#include <rapidjson/stringbuffer.h>
 
 using namespace Engine;
 using namespace rapidjson;

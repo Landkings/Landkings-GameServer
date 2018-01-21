@@ -2,7 +2,7 @@
 
 #include <iomanip>
 
-#include "stringbuffer.h"
+#include <rapidjson/stringbuffer.h>
 
 using namespace rapidjson;
 using namespace uWS;
@@ -11,11 +11,12 @@ using namespace std;
 
 static constexpr uint16_t defaultMsPort = 19998;
 static constexpr unsigned defaultReconnectionTime = 25;
-static constexpr unsigned defaultLogInterval = 1000;
+static constexpr unsigned defaultLogInterval = 250;
 
 
-Engine::Engine::Engine() {
-
+Engine::Engine::Engine() : MESSAGE_PROCESSOR{} {
+    const_cast<MessageProcessor&>(MESSAGE_PROCESSOR['c']) = &Engine::processAcceptConnection;
+    const_cast<MessageProcessor&>(MESSAGE_PROCESSOR['p']) = &Engine::processNewPlayer;
 }
 
 // *** START ***
@@ -32,7 +33,6 @@ void Engine::Engine::run() {
 void Engine::Engine::init()
 {
     terminationSignal = false;
-    logCaptured = false;
     logTermSignal = false;
     logThreadTerminated = false;
     connected = false;
@@ -41,7 +41,7 @@ void Engine::Engine::init()
     runLog();
     customSleep<milli>(100);
     if (!messageServerConnection())
-        log("Can't connect");
+        log.write("Can't connect");
 }
 
 void Engine::Engine::mainLoop()
@@ -75,7 +75,7 @@ void Engine::Engine::mainLoop()
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
             if (messageServerConnection())
                 continue;
-            log("Connection lost");
+            log.write("Connection lost");
             return;
         }
         if (++ticks > 32)
@@ -112,22 +112,16 @@ void Engine::Engine::update() {
 }
 
 void Engine::Engine::runLog() {
-    logStream.open("game-server.log", std::ios_base::app);
     thread([this]()
     {
         while (true)
         {
             customSleep<milli>(defaultLogInterval);
-            while (logCaptured.load())
-                customSleep<micro>(5);
-            logCaptured.store(true);
-            printLogDeq();
-            logCaptured.store(false);
+            log.flush();
             if (logTermSignal.load())
             {
                 lastLog();
-                printLogDeq();
-                logStream.close();
+                log.flush();
                 logThreadTerminated.store(true);
                 return;
             }
@@ -135,46 +129,15 @@ void Engine::Engine::runLog() {
     }).detach();
 }
 
-void Engine::Engine::log(const string& msg)
-{
-    stringstream buffer;
-    time_t t = time(nullptr);
-    tm* curTime = localtime(&t);
-    buffer << '('
-           << setfill('0') << setw(2) << curTime->tm_mday << 'd' << ' '
-           << setfill('0') << setw(2) << curTime->tm_hour << ':'
-           << setfill('0') << setw(2) << curTime->tm_min << ':'
-           << setfill('0') << setw(2) << curTime->tm_sec
-           << ')';
-    buffer << ' ' << msg << '\n';
-    while (logCaptured.load())
-        customSleep<micro>(10);
-    logCaptured.store(true);
-    logDeq.push_back(buffer.str());
-    logCaptured.store(false);
-}
-
-void Engine::Engine::printLogDeq()
-{
-    while (!logDeq.empty())
-    {
-        cout << logDeq[0];
-        logStream << logDeq[0];
-        logDeq.pop_front();
-    }
-    cout.flush();
-    logStream.flush();
-}
-
 void Engine::Engine::lastLog()
 {
     int64_t uptime = (chrono::time_point_cast<chrono::seconds>(chrono::system_clock::now()) - startPoint).count();
     if (uptime == 0)
         return;
-    log(string("Uptime: ") + to_string(uptime) + " seconds");
+    log.write(string("Uptime: ") + to_string(uptime) + " seconds");
 }
 
-void Engine::Engine::runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& overFlag, unsigned seconds)
+void Engine::Engine::runTimer(Flag& stopFlag, Flag& overFlag, unsigned seconds)
 {
     stopFlag = false; overFlag = false;
     std::thread([this, &stopFlag, &overFlag](unsigned seconds)
@@ -184,7 +147,7 @@ void Engine::Engine::runTimer(std::atomic<bool>& stopFlag, std::atomic<bool>& ov
         {
             if (terminationSignal.load())
                 secondsCounter = seconds - 1;
-            log("Remaining for rc: " + to_string(seconds - secondsCounter));
+            log.write("Remaining for rc: " + to_string(seconds - secondsCounter));
             std::this_thread::sleep_for(std::chrono::seconds(1));
             if (stopFlag.load())
                 return;
@@ -208,7 +171,7 @@ void Engine::Engine::runConnection()
         msHub->onMessage(messageHandler);
         std::map<std::string, std::string> header;
         std::getline(std::ifstream("secret.txt"), header["secret"]);
-        msHub->connect("ws://localhost:19998", nullptr, header, defaultReconnectionTime);
+        msHub->connect("ws://localhost:19998", nullptr, header);// defaultReconnectionTime);
         msHub->run();
         // connection lost
         if (connected.load()) // not first time connection
@@ -227,7 +190,7 @@ void Engine::Engine::runConnection()
 
 bool Engine::Engine::messageServerConnection()
 {
-    log("Try connect to message server");
+    log.write("Try connect to message server");
     std::atomic<bool> timeout;
     runTimer(connected, timeout, defaultReconnectionTime);
     while (true)
@@ -254,23 +217,15 @@ bool Engine::Engine::messageServerConnection()
 
 void Engine::Engine::onMsMessage(uWS::WebSocket<uWS::CLIENT>* socket, char* message, size_t length, uWS::OpCode opCode)
 {
-    InputMessageType type = getMessageType(*message);
-    switch (type)
-    {
-        case InputMessageType::acceptConnection:
-            msSocket = socket;
-            processAcceptConnection();
-            return;
-        case InputMessageType::newPlayer:
-            processNewPlayer(message + 1, length - 1);
-            return;
-        default:
-            log("Invalid message type");
-            return;
-    }
+    msSocket = socket;
+    MessageProcessor prc = MESSAGE_PROCESSOR[static_cast<unsigned char>(message[0])];
+    if (prc)
+        (this->*prc)(message + 1, length - 1);
+    else
+        log.write("Invalid message type");
 }
 
-void Engine::Engine::processAcceptConnection()
+void Engine::Engine::processAcceptConnection(char* message, size_t length)
 {
     connected.store(true);
     StringBuffer buffer;
@@ -279,25 +234,12 @@ void Engine::Engine::processAcceptConnection()
     msSocket->send(buffer.GetString(), buffer.GetLength(), TEXT);
 }
 
-void Engine::Engine::processNewPlayer(const char* message, size_t length)
+void Engine::Engine::processNewPlayer(char* message, size_t length)
 {
     string m(message, length);
-    int idx = m.find_first_of('\n');
-    log("New player: nick = " + m.substr(0, idx) + " code =\n" + m.substr(idx + 1));
+    int idx = m.find_first_of('>');
+    log.write(string("New player:") + " nick = " + m.substr(0, idx) + " | code =\n" + m.substr(idx + 1));
     scene.addPlayer(m.substr(0, idx), m.substr(idx + 1));
-}
-
-Engine::Engine::InputMessageType Engine::Engine::getMessageType(char firstChar) const
-{
-    switch (firstChar)
-    {
-        case 'c':
-            return InputMessageType::acceptConnection;
-        case 'p':
-            return InputMessageType::newPlayer;
-        default:
-            return InputMessageType::unknown;
-    }
 }
 
 void Engine::Engine::setMessageType(OutputMessageType type, StringBuffer& buffer)
