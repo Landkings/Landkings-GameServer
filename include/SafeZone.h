@@ -18,12 +18,12 @@ public:
     SafeZone() {}
     SafeZone(Scene* scene, Vec2i spawnPosition, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
             ZoneTier(10000, 0, 10000),
-            ZoneTier(10000, 10000, 9000),
-            ZoneTier(10000, 10000, 8000),
-            ZoneTier(10000, 10000, 6000),
-            ZoneTier(10000, 10000, 4000),
-            ZoneTier(10000, 10000, 1000),
-            ZoneTier(10000, 10000, 500),
+            ZoneTier(1000, 1000, 9000),
+            ZoneTier(1000, 1000, 8000),
+            ZoneTier(1000, 1000, 6000),
+            ZoneTier(1000, 1000, 4000),
+            ZoneTier(1000, 1000, 1000),
+            ZoneTier(1000, 1000, 500),
             ZoneTier(10000, 10000, 100),
             ZoneTier(10000, 10000, 0),
         }) :

@@ -35,6 +35,7 @@ public:
     void addObject(GameObject *obj);
     void addPlayer(std::string playerName, std::string luaCode);
     void luaPush(lua_State *L);
+    void takeItem(Character *c, Item *i);
     long long getTime() const { return time; }
     void createObjectsMessage(rapidjson::StringBuffer& buffer);
     void createMapMessage(rapidjson::StringBuffer& buffer);
@@ -59,6 +60,8 @@ private:
     int luaGetObjects(lua_State *L);
     //int luaCanAttack(lua_State *L);
     int luaGetSafeZone(lua_State *state);
+    int luaGetWidth(lua_State *state);
+    int luaGetHeight(lua_State *state);
 
     //Vec2i getRandomPosition();
     std::vector<GameObject*> objects;

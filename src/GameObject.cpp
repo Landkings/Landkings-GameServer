@@ -24,33 +24,30 @@ Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i 
 }
 
 void Character::update() {
-    if (usingAction) {
-
-        usingAction = false;
-        return;
-    }
-
-    int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
-    scene->luaPush(L);
-    lua_KContext ctx;
-    //lua_
-    int res = lua_pcallk(L, 1, 0, 0, ctx, &dispatchContinuation<Character, &Character::luaContinuationTest>);
-    if (res != LUA_OK) {
-        //std::cout << "Status: " << lua_status(L) << std::endl;
-        //std::cout << "Error running function f: " << lua_tostring(L, -1) << std::endl;
-        //lua_tostring(L, -1);
-        if (res == LUA_YIELD)
-            ;
-            //std::cout << "We yielded" << std::endl;
-        else {
-            //std::cout << "Something different occured. res = " << res << std::endl;
+    if (!usingAction) {
+        int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
+        scene->luaPush(L);
+        lua_KContext ctx;
+        //lua_
+        int res = lua_pcallk(L, 1, 0, 0, ctx, &dispatchContinuation<Character, &Character::luaContinuationTest>);
+        if (res != LUA_OK) {
+            //std::cout << "Status: " << lua_status(L) << std::endl;
+            //std::cout << "Error running function f: " << lua_tostring(L, -1) << std::endl;
+            //lua_tostring(L, -1);
+            if (res == LUA_YIELD)
+                ;
+                //std::cout << "We yielded" << std::endl;
+            else {
+                //std::cout << "Something different occured. res = " << res << std::endl;
+            }
+            lua_pop(L, 1);
+            return;
         }
-        lua_pop(L, 1);
-        return;
     }
+    bool wasUsingAction = usingAction;
     isStaminaRegenAvailable = true;
     //isStaminaHpRegenAvailable = false;
-    maxStaminaTicks = 0;
+    //maxStaminaTicks = 0;
     switch(action) {
     case Action::Move:
         move();
@@ -65,6 +62,8 @@ void Character::update() {
     default:;
         //isStaminaHpRegenAvailable = true;
     }
+    if (wasUsingAction)
+        usingAction = false;
 }
 
 void Character::luaPush(lua_State *state) {
@@ -99,7 +98,6 @@ void Character::attack(Character *target) {
         break;
     }
     if (usingAction) {
-        payAttackCost();
         if (!target->blocking() || target->getBlockDirection() != attackDirection)
             target->takeDamage(currentDamage);
         else
@@ -189,7 +187,8 @@ void Character::block(int amount) {
 }
 
 void Character::takeItem(Item *item) {
-    inventory.addItem(item);
+    item->use(this);
+    //inventory.addItem(item);
 }
 
 void Character::useItem(Item *item) {
@@ -368,8 +367,9 @@ void Character::initLuaState() {
 }
 
 void Character::attack() {
-    if (target)
+    if (target && target->getType() == ObjectType::Player) {
         scene->attack(this, (Character*)target);
+    }
 }
 
 void Character::move() {
@@ -387,6 +387,12 @@ void Character::block() {
         //loseStamina(10); //TODO: change
         nextAttackTime = scene->getTime() + attackCooldown;
     }
+}
+
+void Character::takeItem() {
+   //if (target && (target->getType() == ObjectType::HealingItem || target->getType() == ObjectType::ExpItem)) { //TODO: replace
+   //    scene->takeItem(this, item);
+   //}
 }
 
 void HealingItem::use(Character *target) {

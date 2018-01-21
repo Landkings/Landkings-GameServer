@@ -35,7 +35,7 @@ public:
         }
         return newObj;
     }
-
+    void clear() { objectsCount = 0; }
 private:
     Vec2i getRandomPosition();
     Scene* scene;

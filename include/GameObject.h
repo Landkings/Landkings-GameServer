@@ -133,7 +133,7 @@ public:
     virtual bool isPassable() { return false; }
     virtual GameObject* clone() = 0;
     virtual void luaPush(lua_State *state) = 0;
-    ObjectType getType() { return type; }
+    virtual ObjectType getType() { return type; }
 protected:
     Vec2i position;
     HitBox hbox;
@@ -191,6 +191,7 @@ public:
     }
     void use(Character *target) override;
     GameObject *clone();
+    bool isPassable() { return true; }
 private:
     int healAmount;
 };
@@ -203,6 +204,7 @@ public:
         expAmount(amount) {}
     void use(Character *target) override;
     GameObject *clone();
+    bool isPassable() { return true; }
 private:
     int expAmount;
 };
@@ -241,7 +243,7 @@ public:
     const int getMaxStamina() { return maxStamina + 10 * parameters[Parameters::StaminaPoints]; } //TODO: replace with constant
     const int getDamage() { return damage + 1 * parameters[Parameters::AttackDamage]; } //TODO: replace with constant
     void setDirection(const Direction dir) { direction = dir; }
-    void setTarget (const GameObject *targ) { target = targ; }
+    void setTarget (GameObject *targ) { target = targ; }
     const int getMoveCooldown() { return std::max(0, moveCooldown - 1 * parameters[Parameters::MovementSpeed]); } //TODO: replace with constant
     const int getAttackCooldown() { return std::max(0, attackCooldown - 10 * parameters[Parameters::AttackSpeed]); } //TODO: replace with constant
     long long getNextMoveTime() const { return nextMoveTime; }    
@@ -260,7 +262,7 @@ public:
     const int getSprintStaminaCost() const { return sprintStaminaCost; }
     const int getLevel() { return level; }
     void disableStaminaRegen() { isStaminaRegenAvailable = false; }
-    void enableStaminaRegen() { isStaminaHpRegenAvailable = true; }
+    void enableStaminaRegen() { isStaminaRegenAvailable = true; }
     bool isUsingAction() { return usingAction; }
 protected:
     void init();
@@ -269,6 +271,7 @@ protected:
     void move();
     void attack();
     void block();
+    void takeItem();
 
     //lua functions
     int luaSetAction(lua_State *state);
@@ -313,7 +316,7 @@ protected:
     MovementType movementType;
     AttackDirection attackDirection;
     AttackDirection blockDirection;
-    const GameObject *target;
+    GameObject *target;
     int hitPoints;
     int maxHitPoints;
     int speed;

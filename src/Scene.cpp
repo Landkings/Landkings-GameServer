@@ -25,7 +25,7 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
     //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
     spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0, 99),
-                                        Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 25, 30000);
+                                        Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 100, 30000);
 
     //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
@@ -40,8 +40,39 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
 void Scene::move(GameObject *object, const Vec2i &newPos) {
     if (((Character*)object)->getNextMoveTime() <= time && validPosition(newPos, object->getHitbox())) {
         //((Character*)object)->setNextMoveTime();
-        if (!checkAllCollisions(object, &newPos))
+        //if (!checkAllCollisions(object, &newPos))
+        bool isPassable = true;
+        Item* item = nullptr;
+        for (auto& obj : objects)
+            if (object != obj) {
+                if (isCollide(newPos, object->getHitbox(),  obj->getPosition(), obj->getHitbox())) {
+                    if (obj->isPassable()) {
+                        item = (Item*)obj;
+                        break;
+                    }
+                    else {
+                        isPassable = false;
+                        break;
+                    }
+                }
+            }
+        if (isPassable)
+            for (auto& character : characters)
+                if (character != object)
+                    if (isCollide(newPos, object->getHitbox(),  character->getPosition(), character->getHitbox())) {
+                        isPassable = false;
+                        break;
+                    }
+
+        if (isPassable)
+            isPassable = !checkSceneCollision(object, &newPos);
+
+        if (isPassable) {
+            if (item) {
+                ((Character*)object)->takeItem(item);
+            }
             ((Character*)object)->move(newPos);
+        }
     }
 }
 
@@ -51,24 +82,21 @@ void Scene::move(GameObject *object, GameObject *target) {
 }
 
 void Scene::attack(Character *c1, Character *c2) {
-    if (!canAttack(c1, c2)) {
-        if (!c1->isUsingAction()) {
+        if (!c1->isUsingAction() && !canAttack(c1, c2)) {
             Vec2i newPos = c1->getPosition() + findDirection(c1, c2);
             move(c1, newPos); //TODO: delete
         }
         else {
-            c1->payAttackCost();
+            if (c1->getNextAttackTime() <= time && c2->getHp() > 0) {
+                if (c1->isUsingAction())
+                    c1->payAttackCost();
+                c1->attack(c2);
+            } //Shouldn't be else, since it checks hp after attack
+            if (c2->getHp() <= 0) {
+                c1->setTarget(nullptr);
+                c1->gainExp(c2->getExpValue());
+            }
         }
-    }
-    else {
-        if (c1->getNextAttackTime() <= time && c2->getHp() > 0) {
-            c1->attack(c2);
-        } //Shouldn't be else, since it checks hp after attack
-        if (c2->getHp() <= 0) {
-            c1->setTarget(nullptr);
-            c1->gainExp(c2->getExpValue());
-        }
-    }
 }
 
 void Scene::update() {
@@ -109,7 +137,8 @@ void Scene::addObject(GameObject *obj) {
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
     objectsMutex.lock();
-    if (players.find(playerName) == players.end() || !(player = (Character*)getPlayer(playerName))) {
+    auto it = players.find(playerName);
+    if (it == players.end() || !(player = (Character*)getPlayer(playerName))) {
         player = (Character*)characterSpawner->spawn(characters);
         player->loadLuaCode(luaCode);
         player->setName(playerName);
@@ -117,6 +146,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         //characters.push_back(player);
     }
     else {
+        it->second = luaCode;
         player->loadLuaCode(luaCode);
     }
     objectsMutex.unlock();
@@ -135,6 +165,8 @@ void Scene::luaPush(lua_State *L) {
             "getObjects", dispatch<Scene, &Scene::luaGetObjects>,
             //"canAttack", dispatch<Scene, &Scene::luaCanAttack>,
             "getSafeZone", dispatch<Scene, &Scene::luaGetSafeZone>,
+            "getWidth", dispatch<Scene, &Scene::luaGetWidth>,
+            "getHeight", dispatch<Scene, &Scene::luaGetHeight>,
             //"test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
         };
@@ -142,6 +174,11 @@ void Scene::luaPush(lua_State *L) {
     }
     lua_setmetatable(L, -2);
     //lua_setglobal(L, "Scene");
+}
+
+void Scene::takeItem(Character *c, Item *i) {
+    //if (canTakeItem(c, i))
+    //    c->takeItem(i);
 }
 
 //private methods
@@ -192,7 +229,7 @@ bool Scene::checkSceneCollision(const GameObject *obj, const Vec2i *newPos) {
 bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
     for (auto& object : objects)
         if (object != obj)
-            if (isCollide(*newPos, obj->getHitbox(),  object->getPosition(), object->getHitbox()))
+            if (!object->isPassable() && isCollide(*newPos, obj->getHitbox(),  object->getPosition(), object->getHitbox()))
                 return true;
 
     for (auto& character : characters)
@@ -230,9 +267,17 @@ void Scene::restart() {
     delete safeZone;
     for (int i = 0; i < characters.size(); ++i)
         delete characters[i];
+    characters.clear();
 
-    for (int i = 0; i < objects.size(); ++i)
+    for (int i = 0; i < objects.size(); ++i) {
         delete objects[i];
+    }
+    objects.clear();
+
+    for (auto& spawner : spawners) {
+        //spawner.second->spawn(objects);
+        spawner.second->clear();
+    }
 
     characters.clear();
     objects.clear();
@@ -358,5 +403,15 @@ int Scene::luaGetObjects(lua_State *L) {
 
 int Scene::luaGetSafeZone(lua_State *state) {
     safeZone->luaPush(state);
+    return 1;
+}
+
+int Scene::luaGetWidth(lua_State *state) {
+    lua_pushinteger(state, width * Constants::TILE_WIDTH);
+    return 1;
+}
+
+int Scene::luaGetHeight(lua_State *state) {
+    lua_pushinteger(state, height * Constants::TILE_HEIGHT);
     return 1;
 }
