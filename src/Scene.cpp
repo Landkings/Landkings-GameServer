@@ -255,6 +255,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Value players(kArrayType);
     Value nick(kStringType);
+    Value circle(kObjectType);
     for (auto& character : characters) {
         Value player(kObjectType);
         player.AddMember("x", character->getX(), allc);
@@ -270,6 +271,11 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
         players.PushBack(player, allc);
     }
     doc.AddMember("players", players, allc);
+
+    circle.AddMember("x", safeZone->getPosition().getX(), allc);
+    circle.AddMember("y", safeZone->getPosition().getY(), allc);
+    circle.AddMember("r", safeZone->getRadius(), allc);
+    doc.AddMember("circle", circle, allc);
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
