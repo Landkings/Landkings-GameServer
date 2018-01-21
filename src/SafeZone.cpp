@@ -34,6 +34,7 @@ void SafeZone::luaPush(lua_State *state) {
         luaL_Reg SafeZoneMethods[] = {
             "getPosition", dispatch<SafeZone, &SafeZone::luaGetPosition>,
             "getRadius", dispatch<SafeZone, &SafeZone::luaGetRadius>,
+            "getNextPosition", dispatch<SafeZone, &SafeZone::luaGetNextPosition>,
             nullptr, nullptr
         };
         luaL_setfuncs(state, SafeZoneMethods, 0);
@@ -56,9 +57,15 @@ int SafeZone::luaGetRadius(lua_State *state) {
     return 1;
 }
 
+int SafeZone::luaGetNextPosition(lua_State *state) {
+    newPosition.luaPush(state);
+    return 1;
+}
+
 Vec2i SafeZone::genNextPosition() {
     //int radius = zoneTiers[currentZoneTier].radius;
-    return Vec2i( (position.getX() + (std::rand() % (2 * radius) - radius)) % scene->getWidth(),
-                  position.getY() + (std::rand() % (2 * radius) - radius) % scene->getHeight());
+    //return Vec2i(std::abs((position.getX() + (std::rand() % (2 * radius) - radius))) % scene->getWidth(),
+    //             std::abs(position.getY() + (std::rand() % (2 * radius) - radius)) % scene->getHeight());
+    return Vec2i(400, 400);
 }
 }

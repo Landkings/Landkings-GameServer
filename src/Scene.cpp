@@ -22,9 +22,9 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
                                                                                              height * 4 /* * Constants::TILE_HEIGHT*/))),
     safeZone(new SafeZone(this, Vec2i(0, 0))) {
     tiles.resize(height);
-    //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
+    //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
     //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
-    spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0),
+    spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0, 99),
                                         Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 25, 30000);
 
     //TOOD: add loading map from somewhere or generating
@@ -52,8 +52,13 @@ void Scene::move(GameObject *object, GameObject *target) {
 
 void Scene::attack(Character *c1, Character *c2) {
     if (!canAttack(c1, c2)) {
-        Vec2i newPos = c1->getPosition() + findDirection(c1, c2);
-        move(c1, newPos); //TODO: delete
+        if (!c1->isUsingAction()) {
+            Vec2i newPos = c1->getPosition() + findDirection(c1, c2);
+            move(c1, newPos); //TODO: delete
+        }
+        else {
+            c1->payAttackCost();
+        }
     }
     else {
         if (c1->getNextAttackTime() <= time && c2->getHp() > 0) {
@@ -75,7 +80,7 @@ void Scene::update() {
     }
     safeZone->update();
     for (auto& spawner : spawners) {
-        //spawner.second->spawn(objects);
+        spawner.second->spawn(objects);
     }
 
     for (auto& character : characters) {
@@ -250,6 +255,11 @@ bool Scene::canAttack(Character *c1, Character *c2) {
     return false;
 }
 
+Vec2i Scene::getRandomEmptyPosition() {
+    //TODO: implement
+    return Vec2i();
+}
+
 void Scene::createObjectsMessage(StringBuffer& buffer) {
     objectsMutex.lock();
     Document doc(kObjectType);
@@ -263,6 +273,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
     Value players(kArrayType);
     Value nick(kStringType);
     Value circle(kObjectType);
+    Value items(kArrayType);
     for (auto& character : characters) {
         Value player(kObjectType);
         player.AddMember("x", character->getX(), allc);
@@ -278,6 +289,15 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
         players.PushBack(player, allc);
     }
     doc.AddMember("players", players, allc);
+
+    for (auto& object : objects) {
+        Value item(kObjectType);
+        item.AddMember("x", object->getX(), allc);
+        item.AddMember("y", object->getY(), allc);
+        item.AddMember("sid", ((Item*)object)->getSpriteId(), allc);
+        items.PushBack(item, allc);
+    }
+    doc.AddMember("items", items, allc);
 
     circle.AddMember("x", safeZone->getPosition().getX(), allc);
     circle.AddMember("y", safeZone->getPosition().getY(), allc);

@@ -9,7 +9,8 @@ namespace Engine {
 
 class ObjectSpawner {
 public:
-    ObjectSpawner(Scene *scene, GameObject *prototype, Vec2i minBoundaries, Vec2i maxBoundaries, int objectsLimit = -1, int spawnCoolDown = -1) :
+    ObjectSpawner(Scene *scene, GameObject *prototype, Vec2i minBoundaries,
+                  Vec2i maxBoundaries, int objectsLimit = -1, int spawnCoolDown = -1) :
         scene(scene),
         prototype(prototype),
         minBoundaries(minBoundaries),

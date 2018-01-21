@@ -4,10 +4,11 @@ using namespace Engine;
 
 // public methods
 
-GameObject::GameObject(Scene *scene, Vec2i pos, std::string name, HitBox hbox) : scene(scene), position(pos), hbox(hbox), name(name) {}
+GameObject::GameObject(Scene *scene, ObjectType type, Vec2i pos, std::string name, HitBox hbox) :
+    scene(scene), position(pos), hbox(hbox), name(name), type(type) {}
 
 Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbox) :
-    GameObject(scene, pos, "", hbox),
+    GameObject(scene, ObjectType::Player, pos, "", hbox),
     inventory(20) {
     init();
     if (luaL_loadfile(L, tmpLuaName.c_str()) || lua_pcall(L, 0, 0, 0)) {
@@ -16,13 +17,19 @@ Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbo
 }
 
 Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos) :
-    GameObject(scene, pos, name, HitBox(20, 20)),
+    GameObject(scene, ObjectType::Player, pos, name, HitBox(20, 20)),
     inventory(20) {
     init();
     loadLuaCode(luaCode);
 }
 
 void Character::update() {
+    if (usingAction) {
+
+        usingAction = false;
+        return;
+    }
+
     int t = lua_getglobal(L, "move"); //TODO: replace global environment with a safe environment
     scene->luaPush(L);
     lua_KContext ctx;
@@ -42,7 +49,7 @@ void Character::update() {
         return;
     }
     isStaminaRegenAvailable = true;
-    isStaminaHpRegenAvailable = true;
+    //isStaminaHpRegenAvailable = false;
     maxStaminaTicks = 0;
     switch(action) {
     case Action::Move:
@@ -56,7 +63,7 @@ void Character::update() {
         break;
     case Action::Empty:
     default:;
-        isStaminaHpRegenAvailable = true;
+        //isStaminaHpRegenAvailable = true;
     }
 }
 
@@ -70,6 +77,7 @@ void Character::luaPush(lua_State *state) {
 
         luaL_Reg characterMethods[] = {
             "getPosition", dispatch<Character, &Character::luaGetObjectPosition>,
+            "getObjectType", dispatch<Character, &Character::luaGetObjectType>,
             //"test",        dispatch<Character, &Character::test>,
             nullptr, nullptr
         };
@@ -83,21 +91,23 @@ void Character::attack(Character *target) {
     switch (attackType) {
     case AttackType::Fast:
         currentDamage = damage;
-        nextAttackTime = scene->getTime() + getAttackCooldown();
-        nextStaminaRegenTime = scene->getTime() + getAttackCooldown() / 2;
-        loseStamina(getAttackStaminaCost());
+        nextAttackTime = scene->getTime() + getAttackCooldown() / 2;
         break;
     case AttackType::Strong:
         currentDamage = damage * 2;
-        nextAttackTime = scene->getTime() + getAttackCooldown() * 2;
-        nextStaminaRegenTime = scene->getTime() + getAttackCooldown();
-        loseStamina(getAttackStaminaCost() * 2);
+        nextAttackTime = scene->getTime() + getAttackCooldown() * 2 / 2;
         break;
     }
-    if (!target->blocking() || target->getBlockDirection() != attackDirection)
-        target->takeDamage(currentDamage);
-    else
-        target->block(currentDamage); //maybe multiply damage by 2
+    if (usingAction) {
+        payAttackCost();
+        if (!target->blocking() || target->getBlockDirection() != attackDirection)
+            target->takeDamage(currentDamage);
+        else
+            target->block(currentDamage / 2);
+    }
+    else {
+        usingAction = true;
+    }
 }
 
 void Character::move(Vec2i newPos) {
@@ -197,6 +207,19 @@ void Character::gainExp(int amount) {
     }
 }
 
+void Character::payAttackCost() {
+    switch (attackType) {
+    case AttackType::Fast:
+        nextStaminaRegenTime = scene->getTime() + getAttackCooldown() / 2;
+        loseStamina(getAttackStaminaCost());
+        break;
+    case AttackType::Strong:
+        nextStaminaRegenTime = scene->getTime() + getAttackCooldown();
+        loseStamina(getAttackStaminaCost() * 2);
+        break;
+    }
+}
+
 int Character::getExpValue() {
     return 250 + level * 100; //TODO: replace with constants
 }
@@ -236,7 +259,7 @@ void Character::init() {
     blockDirection = AttackDirection::Torso;
     spriteDirection = SpriteDirection::Down;
     maxStaminaTicks = 0;
-    maxStaminaTicksRequirement = attackCooldown + 100;
+    maxStaminaTicksRequirement = attackCooldown * 10;
     isStaminaHpRegenAvailable = true;
     isStaminaRegenAvailable = true;
     attackStaminaCost = 25;
@@ -247,6 +270,7 @@ void Character::init() {
     nextLevelExp = 500;
     skillPoints = 0;
     currentExp = 0;
+    usingAction = false;
     for (int i = 0; i < (int)Parameters::Size; ++i)
         parameters[(Parameters)i] = 0;
     initLuaState();
@@ -301,37 +325,42 @@ void Character::initLuaState() {
     lua_newtable(L);
     PARAMETERS
     lua_settable(L, -3);
+
+    lua_pushstring(L, "ObjectType");
+    lua_newtable(L);
+    OBJECT_TYPE
+    lua_settable(L, -3);
 #undef E
     //lua_pop(L, 1);
 
     luaL_openlibs(L);
     luaL_Reg characterMethods[] = {
-        "setAction",               gloablDispatch<Character, &Character::luaSetAction>,
-        "getAction",               gloablDispatch<Character, &Character::luaGetAction>,         //?
-        "setDirection",            gloablDispatch<Character, &Character::luaSetDirection>,
-        "getDirection",            gloablDispatch<Character, &Character::luaGetDirection>,      //?
-        "setTarget",               gloablDispatch<Character, &Character::luaSetTarget>,
-        "getTarget",               gloablDispatch<Character, &Character::luaGetTarget>,
-        "getPosition",             gloablDispatch<Character, &Character::luaGetPosition>,
-        "getStamina",              gloablDispatch<Character, &Character::luaGetStamina>,
-        "getHp",                   gloablDispatch<Character, &Character::luaGetHp>,
-        "setAttackType",           gloablDispatch<Character, &Character::luaSetAttackType>,
-        "setMovementType",         gloablDispatch<Character, &Character::luaSetMovementType>,
-        "getMovementType",         gloablDispatch<Character, &Character::luaGetMovementType>,
-        "setAttackDirection",      gloablDispatch<Character, &Character::luaSetAttackDirection>,
-        "setBlockDirection",       gloablDispatch<Character, &Character::luaSetBlockDirection>,
-        "getMe",                   gloablDispatch<Character, &Character::luaGetMe>,             //?
-        "getAttackStaminaCost",    gloablDispatch<Character, &Character::luaGetAttackStaminaCost>,
-        "getMoveStaminaCost",      gloablDispatch<Character, &Character::luaGetMoveStaminaCost>,
-        "getBlockStaminaCost",     gloablDispatch<Character, &Character::luaGetBlockStaminaCost>,
-        "getSprintStaminaCost",    gloablDispatch<Character, &Character::luaGetSprintStaminaCost>,
-        "levelUp",                 gloablDispatch<Character, &Character::luaLevelUp>,
-        "getCurrentExp",           gloablDispatch<Character, &Character::luaGetCurrentExp>,
-        "getNextLevelExp",         gloablDispatch<Character, &Character::luaGetNextLevelExp>,
-        "getAvailableSkillPoints", gloablDispatch<Character, &Character::luaGetAvailableSkillPoints>,
-        "getParameterLevelUpCost", gloablDispatch<Character, &Character::luaGetParameterLevelUpCost>,
-        "canMove",                 gloablDispatch<Character, &Character::luaCanMove>,
-        "canAttack",               gloablDispatch<Character, &Character::luaCanAttack>,
+        "setAction",               globalDispatch<Character, &Character::luaSetAction>,
+        "getAction",               globalDispatch<Character, &Character::luaGetAction>,         //?
+        "setDirection",            globalDispatch<Character, &Character::luaSetDirection>,
+        "getDirection",            globalDispatch<Character, &Character::luaGetDirection>,      //?
+        "setTarget",               globalDispatch<Character, &Character::luaSetTarget>,
+        "getTarget",               globalDispatch<Character, &Character::luaGetTarget>,
+        "getPosition",             globalDispatch<Character, &Character::luaGetPosition>,
+        "getStamina",              globalDispatch<Character, &Character::luaGetStamina>,
+        "getHp",                   globalDispatch<Character, &Character::luaGetHp>,
+        "setAttackType",           globalDispatch<Character, &Character::luaSetAttackType>,
+        "setMovementType",         globalDispatch<Character, &Character::luaSetMovementType>,
+        "getMovementType",         globalDispatch<Character, &Character::luaGetMovementType>,
+        "setAttackDirection",      globalDispatch<Character, &Character::luaSetAttackDirection>,
+        "setBlockDirection",       globalDispatch<Character, &Character::luaSetBlockDirection>,
+        "getMe",                   globalDispatch<Character, &Character::luaGetMe>,             //?
+        "getAttackStaminaCost",    globalDispatch<Character, &Character::luaGetAttackStaminaCost>,
+        "getMoveStaminaCost",      globalDispatch<Character, &Character::luaGetMoveStaminaCost>,
+        "getBlockStaminaCost",     globalDispatch<Character, &Character::luaGetBlockStaminaCost>,
+        "getSprintStaminaCost",    globalDispatch<Character, &Character::luaGetSprintStaminaCost>,
+        "levelUp",                 globalDispatch<Character, &Character::luaLevelUp>,
+        "getCurrentExp",           globalDispatch<Character, &Character::luaGetCurrentExp>,
+        "getNextLevelExp",         globalDispatch<Character, &Character::luaGetNextLevelExp>,
+        "getAvailableSkillPoints", globalDispatch<Character, &Character::luaGetAvailableSkillPoints>,
+        "getParameterLevelUpCost", globalDispatch<Character, &Character::luaGetParameterLevelUpCost>,
+        "canMove",                 globalDispatch<Character, &Character::luaCanMove>,
+        "canAttack",               globalDispatch<Character, &Character::luaCanAttack>,
         nullptr, nullptr
     };
     luaL_setfuncs(L, characterMethods, 0);
@@ -339,9 +368,8 @@ void Character::initLuaState() {
 }
 
 void Character::attack() {
-    if (target) {
+    if (target)
         scene->attack(this, (Character*)target);
-    }
 }
 
 void Character::move() {
@@ -602,6 +630,11 @@ int Character::luaCanAttack(lua_State *state) {
     return 1;
 }
 
+int Character::luaGetObjectType(lua_State *state) {
+    lua_pushinteger(state, (int)ObjectType::Player);
+    return 1;
+}
+
 void Character::luaCountHook(lua_State *state, lua_Debug *ar) {
     //lua_getinfo(L, ar);
     //std:: cout << "Is yieldable: " << lua_isyieldable(state) << std::endl;
@@ -634,9 +667,21 @@ void Item::luaPush(lua_State *state) {
         lua_setfield(state, -2, "__index");
 
         luaL_Reg ItemsMethods[] = {
+            "getObjectType", dispatch<Item, &Item::luaGetObjectType>,
+            "getPosition", dispatch<Item, &Item::luaGetPosition>,
             nullptr, nullptr
         };
         luaL_setfuncs(state, ItemsMethods, 0);
     }
     lua_setmetatable(state, -2);
+}
+
+int Item::luaGetObjectType(lua_State *state) {
+    lua_pushinteger(state, (int)type);
+    return 1;
+}
+
+int Item::luaGetPosition(lua_State *state) {
+    position.luaPush(state);
+    return 1;
 }

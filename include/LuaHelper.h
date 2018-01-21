@@ -23,7 +23,7 @@ template<class T>
 using continuationMethod = int (T::*)(lua_State *L, int status, lua_KContext ctx);
 
 template<class T, method<T> func>
-int gloablDispatch(lua_State *L) {
+int globalDispatch(lua_State *L) {
     T* ptr = *static_cast<T**>(lua_getextraspace(L));
     return ((*ptr).*func)(L);
 }

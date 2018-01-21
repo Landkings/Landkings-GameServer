@@ -50,6 +50,11 @@ namespace Engine {
     E(StaminaCostReduction, StaminaCostReduction, Parameters) \
     E(StaminaRegenFrequency, StaminaRegenFrequency, Parameters)
 
+#define OBJECT_TYPE \
+    E(Player, Player, ObjectType) \
+    E(HealingItem, HealingItem, ObjectType) \
+    E(ExpItem, ExpItem, ObjectType)
+
 #define E C_ENUM_HELPER
 enum class Action {
     ACTION
@@ -80,6 +85,11 @@ enum class Parameters {
     PARAMETERS
     Size
 };
+
+enum class ObjectType {
+    OBJECT_TYPE
+    Size
+};
 #undef E
 
 //#define E C_ENUM_TO_STRING_HELPER
@@ -108,7 +118,7 @@ const Vec2i directions[4] = {
 
 class GameObject {
 public:
-    GameObject(Scene* scene, Vec2i pos = Vec2i(), std::string name = "", HitBox hbox = HitBox());
+    GameObject(Scene* scene, ObjectType type, Vec2i pos = Vec2i(), std::string name = "", HitBox hbox = HitBox());
     Vec2i getPosition() const { return position; }
     virtual void setPosition(Vec2i pos) { position = pos; }
     virtual void setName(std::string newName) { name = newName; }
@@ -123,25 +133,28 @@ public:
     virtual bool isPassable() { return false; }
     virtual GameObject* clone() = 0;
     virtual void luaPush(lua_State *state) = 0;
+    ObjectType getType() { return type; }
 protected:
     Vec2i position;
     HitBox hbox;
     Scene *scene;
+    ObjectType type;
     std::string name; //?
 };
 
 class Item : public GameObject {
 public:
     Item(Scene *scene, Vec2i pos, std::string name, HitBox hbox, int size, int maxCharges,
-         int useCooldown, int staminaCost, int actionCooldown) :
-        GameObject(scene, pos, name, hbox),
+         int useCooldown, int staminaCost, int actionCooldown, int spriteId, ObjectType type) :
+        GameObject(scene, type, pos, name, hbox),
         maxCharges(maxCharges),
         consumedCharges(0),
         size(size),
         isInInventory(false),
         useCooldown(useCooldown),
         staminaCost(staminaCost),
-        actionCooldown(actionCooldown) {
+        actionCooldown(actionCooldown),
+        spriteId(spriteId) {
     }
     virtual void use(Character* target) = 0;
     virtual bool used() const { return consumedCharges == maxCharges; }
@@ -153,7 +166,12 @@ public:
     //virtual void collect(Character* target);
     virtual bool inInventory() const { return isInInventory; }
     void luaPush(lua_State *state) override;
+    virtual int getSpriteId() { return spriteId; }
 protected:
+
+    int luaGetObjectType(lua_State *state);
+    int luaGetPosition(lua_State *state);
+
     int maxCharges;
     int consumedCharges;
     int size;
@@ -161,13 +179,14 @@ protected:
     int useCooldown;
     int staminaCost;
     int actionCooldown;
+    int spriteId;
 };
 
 class HealingItem : public Item {
 public:
     HealingItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size, int maxCharges,
-                int useCooldown, int staminaCost, int actionCooldown) :
-        Item(scene, pos, "HealingItem", hbox, size, maxCharges, useCooldown, staminaCost, actionCooldown),
+                int useCooldown, int staminaCost, int actionCooldown, int spriteId) :
+        Item(scene, pos, "HealingItem", hbox, size, maxCharges, useCooldown, staminaCost, actionCooldown, spriteId, ObjectType::HealingItem),
         healAmount(amount) {
     }
     void use(Character *target) override;
@@ -179,8 +198,8 @@ private:
 class ExpItem : public Item {
 public:
     ExpItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size,
-            int maxCharges, int useCooldwn, int staminaCost, int actionCooldown) :
-        Item(scene, pos, "ExpItem", hbox, size, maxCharges, useCooldwn, staminaCost, actionCooldown),
+            int maxCharges, int useCooldwn, int staminaCost, int actionCooldown, int spriteId) :
+        Item(scene, pos, "ExpItem", hbox, size, maxCharges, useCooldwn, staminaCost, actionCooldown, spriteId, ObjectType::ExpItem),
         expAmount(amount) {}
     void use(Character *target) override;
     GameObject *clone();
@@ -208,6 +227,7 @@ public:
     void takeItem(Item *item);
     void useItem(Item *item);
     void gainExp(int amount);
+    void payAttackCost();
     int getExpValue();
     GameObject* clone();
     ~Character();
@@ -241,6 +261,7 @@ public:
     const int getLevel() { return level; }
     void disableStaminaRegen() { isStaminaRegenAvailable = false; }
     void enableStaminaRegen() { isStaminaHpRegenAvailable = true; }
+    bool isUsingAction() { return usingAction; }
 protected:
     void init();
     void initLuaState();
@@ -279,6 +300,7 @@ protected:
     int luaCanMove(lua_State *state);
     int luaUseItem(lua_State *state);
     int luaCanAttack(lua_State *state);
+    int luaGetObjectType(lua_State *state);
 
     void luaCountHook(lua_State *state, lua_Debug *ar);
 
@@ -317,6 +339,7 @@ protected:
     int nextLevelExp;
     int currentExp;
     int skillPoints;
+    bool usingAction;
     std::unordered_map<Parameters, int> parameters;
     SpriteDirection spriteDirection;
     Inventory inventory;

@@ -43,6 +43,7 @@ public:
     const int getHeight() { return height * Constants::TILE_HEIGHT; }
     bool canMove(Character *c, Vec2i newPos);
     bool canAttack(Character *c1, Character *c2);
+    Vec2i getRandomEmptyPosition();
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);

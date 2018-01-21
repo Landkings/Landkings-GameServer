@@ -18,7 +18,14 @@ public:
     SafeZone() {}
     SafeZone(Scene* scene, Vec2i spawnPosition, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
             ZoneTier(10000, 0, 10000),
-            ZoneTier(10000, 10000, 100)
+            ZoneTier(10000, 10000, 9000),
+            ZoneTier(10000, 10000, 8000),
+            ZoneTier(10000, 10000, 6000),
+            ZoneTier(10000, 10000, 4000),
+            ZoneTier(10000, 10000, 1000),
+            ZoneTier(10000, 10000, 500),
+            ZoneTier(10000, 10000, 100),
+            ZoneTier(10000, 10000, 0),
         }) :
         scene(scene),
         nextZoneTime(scene->getTime() + zoneTiers[0].stayTime),
@@ -36,6 +43,7 @@ public:
 private:
     int luaGetPosition(lua_State *state);
     int luaGetRadius(lua_State *state);
+    int luaGetNextPosition(lua_State *state);
     Vec2i genNextPosition();
     std::vector<ZoneTier> zoneTiers;
     Scene *scene;
