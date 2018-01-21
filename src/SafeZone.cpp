@@ -4,21 +4,24 @@ namespace Engine {
 void SafeZone::update() {
     if (nextZoneTime == scene->getTime()) {
         if (currentZoneTier < zoneTiers.size() - 1) {
-            nextZoneTime += zoneTiers[currentZoneTier].shrinkTime + zoneTiers[currentZoneTier + 1].stayTime; //+1?
+            nextZoneTime += zoneTiers[currentZoneTier + 1].shrinkTime + zoneTiers[currentZoneTier + 1].stayTime; //+1?
+            radius = zoneTiers[currentZoneTier].radius;
             ++currentZoneTier;
             lastPosition = newPosition;
+            position = lastPosition;
             newPosition = genNextPosition();
-            update(); //TODO: verify
         }
     }
     else {
         if(currentZoneTier > 0) {
             if (scene->getTime() < nextZoneTime - zoneTiers[currentZoneTier].stayTime) {
-                position = lastPosition  + (lastPosition - newPosition) * ((nextZoneTime - zoneTiers[currentZoneTier].stayTime - scene->getTime()) /
-                        ((double)zoneTiers[currentZoneTier].shrinkTime));
+                double progress = 1.0 - ((nextZoneTime - zoneTiers[currentZoneTier].stayTime - scene->getTime()) / ((double)zoneTiers[currentZoneTier].shrinkTime));
+                position = lastPosition  - (lastPosition - newPosition) * progress;
+                radius = zoneTiers[currentZoneTier - 1].radius - progress * (zoneTiers[currentZoneTier - 1].radius - zoneTiers[currentZoneTier].radius);
             }
         }
     }
+    //std::cout << "Radius: " << radius << std::endl;
 }
 
 void SafeZone::luaPush(lua_State *state) {
@@ -39,7 +42,7 @@ void SafeZone::luaPush(lua_State *state) {
 }
 
 bool SafeZone::inZone(Engine::Character *player) {
-    return (player->getPosition() - position).abs() <= zoneTiers[currentZoneTier].radius;
+    return (player->getPosition() - position).abs() <= radius;
 }
 
 int SafeZone::luaGetPosition(lua_State *state) {
@@ -54,7 +57,7 @@ int SafeZone::luaGetRadius(lua_State *state) {
 }
 
 Vec2i SafeZone::genNextPosition() {
-    int radius = zoneTiers[currentZoneTier].radius;
+    //int radius = zoneTiers[currentZoneTier].radius;
     return Vec2i( (position.getX() + (std::rand() % (2 * radius) - radius)) % scene->getWidth(),
                   position.getY() + (std::rand() % (2 * radius) - radius) % scene->getHeight());
 }

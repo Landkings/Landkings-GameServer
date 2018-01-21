@@ -41,6 +41,8 @@ public:
     bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
     const int getWidth() { return width * Constants::TILE_WIDTH; }
     const int getHeight() { return height * Constants::TILE_HEIGHT; }
+    bool canMove(Character *c, Vec2i newPos);
+    bool canAttack(Character *c1, Character *c2);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);
@@ -51,11 +53,10 @@ private:
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
     void restart();
-    bool canAttack(Character *c1, Character *c2);
 
     //lua methods
     int luaGetObjects(lua_State *L);
-    int luaCanAttack(lua_State *L);
+    //int luaCanAttack(lua_State *L);
     int luaGetSafeZone(lua_State *state);
 
     //Vec2i getRandomPosition();

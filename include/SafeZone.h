@@ -22,6 +22,7 @@ public:
         }) :
         scene(scene),
         nextZoneTime(scene->getTime() + zoneTiers[0].stayTime),
+        radius(zoneTiers[0].radius),
         zoneTiers(zoneTiers),
         lastPosition(spawnPosition),
         position(spawnPosition),
@@ -30,6 +31,8 @@ public:
     void update();
     void luaPush(lua_State *state);
     bool inZone(Character *player);
+    Vec2i getPosition() { return position; }
+    int getRadius() { return radius; }
 private:
     int luaGetPosition(lua_State *state);
     int luaGetRadius(lua_State *state);
@@ -41,5 +44,6 @@ private:
     Vec2i newPosition;
     int nextZoneTime;
     int currentZoneTier;
+    int radius;
 };
 }

@@ -152,6 +152,7 @@ public:
     virtual int getActionCooldown() const { return actionCooldown; }
     //virtual void collect(Character* target);
     virtual bool inInventory() const { return isInInventory; }
+    void luaPush(lua_State *state) override;
 protected:
     int maxCharges;
     int consumedCharges;
@@ -170,10 +171,21 @@ public:
         healAmount(amount) {
     }
     void use(Character *target) override;
-    void luaPush(lua_State *state);
     GameObject *clone();
 private:
     int healAmount;
+};
+
+class ExpItem : public Item {
+public:
+    ExpItem(Scene *scene, Vec2i pos, HitBox hbox, int amount, int size,
+            int maxCharges, int useCooldwn, int staminaCost, int actionCooldown) :
+        Item(scene, pos, "ExpItem", hbox, size, maxCharges, useCooldwn, staminaCost, actionCooldown),
+        expAmount(amount) {}
+    void use(Character *target) override;
+    GameObject *clone();
+private:
+    int expAmount;
 };
 
 class Character : public GameObject {
@@ -264,6 +276,9 @@ protected:
     int luaGetNextLevelExp(lua_State *state);
     int luaGetParameterLevel(lua_State *state);
     int luaGetParameterLevelUpCost(lua_State *state);
+    int luaCanMove(lua_State *state);
+    int luaUseItem(lua_State *state);
+    int luaCanAttack(lua_State *state);
 
     void luaCountHook(lua_State *state, lua_Debug *ar);
 

@@ -189,6 +189,7 @@ void Character::useItem(Item *item) {
 void Character::gainExp(int amount) {
     currentExp += amount;
     while (currentExp >= nextLevelExp) {
+        hitPoints = maxHitPoints;
         currentExp -= nextLevelExp;
         ++level;
         ++skillPoints;
@@ -306,9 +307,9 @@ void Character::initLuaState() {
     luaL_openlibs(L);
     luaL_Reg characterMethods[] = {
         "setAction",               gloablDispatch<Character, &Character::luaSetAction>,
-        "getAction",               gloablDispatch<Character, &Character::luaGetAction>,
+        "getAction",               gloablDispatch<Character, &Character::luaGetAction>,         //?
         "setDirection",            gloablDispatch<Character, &Character::luaSetDirection>,
-        "getDirection",            gloablDispatch<Character, &Character::luaGetDirection>,
+        "getDirection",            gloablDispatch<Character, &Character::luaGetDirection>,      //?
         "setTarget",               gloablDispatch<Character, &Character::luaSetTarget>,
         "getTarget",               gloablDispatch<Character, &Character::luaGetTarget>,
         "getPosition",             gloablDispatch<Character, &Character::luaGetPosition>,
@@ -319,7 +320,7 @@ void Character::initLuaState() {
         "getMovementType",         gloablDispatch<Character, &Character::luaGetMovementType>,
         "setAttackDirection",      gloablDispatch<Character, &Character::luaSetAttackDirection>,
         "setBlockDirection",       gloablDispatch<Character, &Character::luaSetBlockDirection>,
-        "getMe",                   gloablDispatch<Character, &Character::luaGetMe>,
+        "getMe",                   gloablDispatch<Character, &Character::luaGetMe>,             //?
         "getAttackStaminaCost",    gloablDispatch<Character, &Character::luaGetAttackStaminaCost>,
         "getMoveStaminaCost",      gloablDispatch<Character, &Character::luaGetMoveStaminaCost>,
         "getBlockStaminaCost",     gloablDispatch<Character, &Character::luaGetBlockStaminaCost>,
@@ -329,7 +330,8 @@ void Character::initLuaState() {
         "getNextLevelExp",         gloablDispatch<Character, &Character::luaGetNextLevelExp>,
         "getAvailableSkillPoints", gloablDispatch<Character, &Character::luaGetAvailableSkillPoints>,
         "getParameterLevelUpCost", gloablDispatch<Character, &Character::luaGetParameterLevelUpCost>,
-        //"write",                gloablDispatch<Character, &Character::write>,
+        "canMove",                 gloablDispatch<Character, &Character::luaCanMove>,
+        "canAttack",               gloablDispatch<Character, &Character::luaCanAttack>,
         nullptr, nullptr
     };
     luaL_setfuncs(L, characterMethods, 0);
@@ -364,23 +366,6 @@ void HealingItem::use(Character *target) {
     ++consumedCharges;
 }
 
-void HealingItem::luaPush(lua_State *state) {
-    HealingItem **Ptem= (HealingItem**)lua_newuserdata(state, sizeof(HealingItem*));
-    *Ptem= this;
-    if (luaL_newmetatable(state, "HealingItemMetaTable")) {
-        lua_pushvalue(state, -1);
-        lua_setfield(state, -2, "__index");
-
-        luaL_Reg HealingItemsMethods[] = {
-            //"getItems", dispatch<Inventory, &Inventory::luaGetItems>,
-            //"test", dispatch<Inventory, &Inventory::test>,
-            nullptr, nullptr
-        };
-        luaL_setfuncs(state, HealingItemsMethods, 0);
-    }
-    lua_setmetatable(state, -2);
-}
-
 GameObject *HealingItem::clone() {
     HealingItem* newHealingItem = new HealingItem(*this);//scene, position, hbox, healAmount, size);
     return newHealingItem;
@@ -394,7 +379,14 @@ GameObject *HealingItem::clone() {
 // ---------------------- LUA FUNCTIONS -----------------------
 
 int Character::luaSetAction(lua_State *state) {
-    action = (Action)luaL_checkinteger(state, 1);
+    int actionInt = luaL_checkinteger(state, 1);
+    if (actionInt < (int)Action::Size) {
+        action = (Action)actionInt;
+    }
+    else {
+        //TODO: raise error
+    }
+
     return 0;
 }
 
@@ -404,7 +396,13 @@ int Character::luaGetAction(lua_State *state) {
 }
 
 int Character::luaSetDirection(lua_State *state) {
-    direction = (Direction)luaL_checkinteger(state, 1);
+    int directionInt = luaL_checkinteger(state, 1);
+    if (directionInt < (int)Direction::Size) {
+        direction = (Direction)directionInt;
+    }
+    else {
+        //TODO: raise error
+    }
     return 0;
 }
 
@@ -578,6 +576,32 @@ int Character::luaGetParameterLevelUpCost(lua_State *state) {
     return 1;
 }
 
+int Character::luaCanMove(lua_State *state) {
+    int directionInt = luaL_checkinteger(state, 1);
+    Direction dir;
+    if (directionInt < (int)Direction::Size) {
+        dir = (Direction)directionInt;
+    }
+    else {
+        //TODO: raise error
+    }
+    lua_pushboolean(state, scene->canMove(this, position + directions[(int)dir]));
+    return 1;
+}
+
+int Character::luaUseItem(lua_State *state) {
+    Item *item = *(Item**)luaL_checkudata(state, -1, "ItemMetaTable");
+    //TOOD: if (...)
+        useItem(item);
+        return 0;
+}
+
+int Character::luaCanAttack(lua_State *state) {
+    Character* target = (Character*)lua_touserdata(state, -1);
+    lua_pushboolean(state, scene->canAttack(this, target));
+    return 1;
+}
+
 void Character::luaCountHook(lua_State *state, lua_Debug *ar) {
     //lua_getinfo(L, ar);
     //std:: cout << "Is yieldable: " << lua_isyieldable(state) << std::endl;
@@ -590,4 +614,29 @@ void Character::luaCountHook(lua_State *state, lua_Debug *ar) {
 
 int Character::luaContinuationTest(lua_State *state, int status, lua_KContext ctx) {
     std::cout << "We are in continuation function" << std::endl;
+}
+
+void ExpItem::use(Character *target) {
+    target->gainExp(expAmount);
+    ++consumedCharges;
+}
+
+GameObject *ExpItem::clone() {
+    ExpItem* expItem= new ExpItem(*this);
+    return expItem;
+}
+
+void Item::luaPush(lua_State *state) {
+    Item **Ptem= (Item**)lua_newuserdata(state, sizeof(Item*));
+    *Ptem= this;
+    if (luaL_newmetatable(state, "ItemMetaTable")) {
+        lua_pushvalue(state, -1);
+        lua_setfield(state, -2, "__index");
+
+        luaL_Reg ItemsMethods[] = {
+            nullptr, nullptr
+        };
+        luaL_setfuncs(state, ItemsMethods, 0);
+    }
+    lua_setmetatable(state, -2);
 }

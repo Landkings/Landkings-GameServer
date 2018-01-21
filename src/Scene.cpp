@@ -22,8 +22,10 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
                                                                                              height * 4 /* * Constants::TILE_HEIGHT*/))),
     safeZone(new SafeZone(this, Vec2i(0, 0))) {
     tiles.resize(height);
-    spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
-                                         Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
+    //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100),
+    //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
+    spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0),
+                                        Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 25, 30000);
 
     //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
@@ -66,7 +68,7 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     objectsMutex.lock();
-    if (characters.size() <= 1) {
+    if (characters.size() <= 1 && players.size() > 1) {
         restart();
         objectsMutex.unlock();
         return;
@@ -126,7 +128,7 @@ void Scene::luaPush(lua_State *L) {
 
         luaL_Reg SceneMethods[] = {
             "getObjects", dispatch<Scene, &Scene::luaGetObjects>,
-            "canAttack", dispatch<Scene, &Scene::luaCanAttack>,
+            //"canAttack", dispatch<Scene, &Scene::luaCanAttack>,
             "getSafeZone", dispatch<Scene, &Scene::luaGetSafeZone>,
             //"test", dispatch<Scene, &Scene::test>,
             nullptr, nullptr
@@ -194,6 +196,11 @@ bool Scene::checkAllCollisions(const GameObject *obj, const Vec2i *newPos) {
                 return true;
 
     return checkSceneCollision(obj, newPos);
+}
+
+bool Scene::canMove(Character *c, Vec2i newPos) {
+    return c->getNextMoveTime() <= time && validPosition(newPos, c->getHitbox()) &&
+        !checkAllCollisions(c, &newPos);
 }
 
 GameObject *Scene::getPlayer(std::string &playerName) {
@@ -326,13 +333,6 @@ int Scene::luaGetObjects(lua_State *L) {
         }
         //lua_pushinteger(L, i++);
     }
-    return 1;
-}
-
-int Scene::luaCanAttack(lua_State *state) {
-    Character* player = *static_cast<Character**>(lua_getextraspace(state));
-    Character* target = (Character*)lua_touserdata(state, -1);
-    lua_pushboolean(state, canAttack(player, target));
     return 1;
 }
 
