@@ -103,7 +103,7 @@ void Scene::attack(Character *c1, Character *c2) {
 void Scene::update() {
     {
         bool cur;
-        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        while (!objectsAcquired.compare_exchange_strong(cur, true))
         {
             cur = false;
             std::this_thread::sleep_for(std::chrono::nanoseconds(5));
@@ -111,7 +111,7 @@ void Scene::update() {
     }
     if (characters.size() <= 1 && players.size() > 1) {
         restart();
-        objectsAcqired.store(false);
+        objectsAcquired.store(false);
         return;
     }
     safeZone->update();
@@ -135,7 +135,7 @@ void Scene::update() {
     }
     clearCorpses();
     ++time;
-    objectsAcqired.store(false);
+    objectsAcquired.store(false);
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -146,7 +146,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
     {
         bool cur;
-        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        while (!objectsAcquired.compare_exchange_strong(cur, true))
         {
             cur = false;
             std::this_thread::sleep_for(std::chrono::nanoseconds(5));
@@ -164,7 +164,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         it->second = luaCode;
         player->loadLuaCode(luaCode);
     }
-    objectsAcqired.store(false);
+    objectsAcquired.store(false);
 }
 
 void Scene::luaPush(lua_State *L) {
@@ -323,7 +323,7 @@ Vec2i Scene::getRandomEmptyPosition() {
 void Scene::createObjectsMessage(StringBuffer& buffer) {
     {
         bool cur;
-        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        while (!objectsAcquired.compare_exchange_strong(cur, true))
         {
             cur = false;
             std::this_thread::sleep_for(std::chrono::nanoseconds(5));
@@ -373,7 +373,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    objectsAcqired.store(false);
+    objectsAcquired.store(false);
 }
 
 void Scene::createMapMessage(StringBuffer& buffer) {

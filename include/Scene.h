@@ -71,7 +71,7 @@ private:
     int height;
     int width;
     long long time;
-    std::atomic<bool> objectsAcqired;
+    std::atomic<bool> objectsAcquired;
     //todo replace
     Tile land;
     Tile wall;
