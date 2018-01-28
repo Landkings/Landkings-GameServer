@@ -11,6 +11,7 @@ function getNearest(objects)
         distance = getDist(myPos, objPos);
         if (minDistance > distance) then
             candidat = objects[i];
+            minDistance = distance;
         end
     end
     return candidat;

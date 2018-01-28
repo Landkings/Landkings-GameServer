@@ -4,6 +4,7 @@
 #include "SafeZone.h"
 
 #include <iomanip>
+#include <thread>
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -100,10 +101,17 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
-    objectsMutex.lock();
+    {
+        bool cur;
+        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        {
+            cur = false;
+            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+        }
+    }
     if (characters.size() <= 1 && players.size() > 1) {
         restart();
-        objectsMutex.unlock();
+        objectsAcqired.store(false);
         return;
     }
     safeZone->update();
@@ -127,7 +135,7 @@ void Scene::update() {
     }
     clearCorpses();
     ++time;
-    objectsMutex.unlock();
+    objectsAcqired.store(false);
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -136,7 +144,14 @@ void Scene::addObject(GameObject *obj) {
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
-    objectsMutex.lock();
+    {
+        bool cur;
+        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        {
+            cur = false;
+            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+        }
+    }
     auto it = players.find(playerName);
     if (it == players.end() || !(player = (Character*)getPlayer(playerName))) {
         player = (Character*)characterSpawner->spawn(characters);
@@ -149,7 +164,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         it->second = luaCode;
         player->loadLuaCode(luaCode);
     }
-    objectsMutex.unlock();
+    objectsAcqired.store(false);
 }
 
 void Scene::luaPush(lua_State *L) {
@@ -306,7 +321,14 @@ Vec2i Scene::getRandomEmptyPosition() {
 }
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
-    objectsMutex.lock();
+    {
+        bool cur;
+        while (!objectsAcqired.compare_exchange_strong(cur, true))
+        {
+            cur = false;
+            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+        }
+    }
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
@@ -351,7 +373,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    objectsMutex.unlock();
+    objectsAcqired.store(false);
 }
 
 void Scene::createMapMessage(StringBuffer& buffer) {

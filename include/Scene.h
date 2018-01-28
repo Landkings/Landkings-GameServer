@@ -2,10 +2,10 @@
 #include <iostream>
 #include <vector>
 #include <memory>
-#include <mutex>
 #include <set>
 #include <map>
 #include <unordered_map>
+#include <atomic>
 
 #include <rapidjson/stringbuffer.h>
 
@@ -71,7 +71,7 @@ private:
     int height;
     int width;
     long long time;
-    std::mutex objectsMutex;
+    std::atomic<bool> objectsAcqired;
     //todo replace
     Tile land;
     Tile wall;
