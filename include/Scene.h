@@ -56,6 +56,9 @@ private:
     void clearCorpses();
     void restart();
 
+    void acquireObjects();
+    void releaseObjects()
+
     //lua methods
     int luaGetObjects(lua_State *L);
     //int luaCanAttack(lua_State *L);

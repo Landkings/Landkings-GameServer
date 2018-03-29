@@ -101,17 +101,10 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+    acquireObjects();
     if (characters.size() <= 1 && players.size() > 1) {
         restart();
-        objectsAcquired.store(false);
+        releaseObjects();
         return;
     }
     safeZone->update();
@@ -135,7 +128,7 @@ void Scene::update() {
     }
     clearCorpses();
     ++time;
-    objectsAcquired.store(false);
+    acquireObjects();
 }
 
 void Scene::addObject(GameObject *obj) {
@@ -144,14 +137,7 @@ void Scene::addObject(GameObject *obj) {
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+    acquireObjects();
     auto it = players.find(playerName);
     if (it == players.end() || !(player = (Character*)getPlayer(playerName))) {
         player = (Character*)characterSpawner->spawn(characters);
@@ -164,7 +150,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
         it->second = luaCode;
         player->loadLuaCode(luaCode);
     }
-    objectsAcquired.store(false);
+    releaseObjects();
 }
 
 void Scene::luaPush(lua_State *L) {
@@ -321,14 +307,8 @@ Vec2i Scene::getRandomEmptyPosition() {
 }
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+
+    acquireObjects();
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
@@ -373,7 +353,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    objectsAcquired.store(false);
+    releaseObjects();
 }
 
 void Scene::createMapMessage(StringBuffer& buffer) {
@@ -436,4 +416,19 @@ int Scene::luaGetWidth(lua_State *state) {
 int Scene::luaGetHeight(lua_State *state) {
     lua_pushinteger(state, height * Constants::TILE_HEIGHT);
     return 1;
+}
+
+void Scene::acquireObjects()
+{
+    bool cur = false;
+    while (!objectsAcquired.compare_exchange_strong(cur, true))
+    {
+        cur = false;
+        std::this_thread::sleep_for(std::chrono::nanoseconds(25));
+    }
+}
+
+void Scene::releaseObjects()
+{
+    objectsAcquired.exchange(false);
 }
