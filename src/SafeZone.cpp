@@ -1,3 +1,4 @@
+#include <ctime>
 #include "SafeZone.h"
 
 namespace Engine {
@@ -19,6 +20,14 @@ void SafeZone::update() {
                 position = lastPosition  - (lastPosition - newPosition) * progress;
                 radius = zoneTiers[currentZoneTier - 1].radius - progress * (zoneTiers[currentZoneTier - 1].radius - zoneTiers[currentZoneTier].radius);
             }
+        }
+        if (zoneTiers.size() - 1  == currentZoneTier) {
+            currentZoneTier = 0;
+            nextZoneTime = scene->getTime() + zoneTiers[0].stayTime;
+            radius = zoneTiers[0].radius;
+            //lastPosition =
+            //position(spawnPosition);
+            //newPosition(spawnPosition);
         }
     }
     //std::cout << "Radius: " << radius << std::endl;
@@ -66,6 +75,7 @@ Vec2i SafeZone::genNextPosition() {
     //int radius = zoneTiers[currentZoneTier].radius;
     //return Vec2i(std::abs((position.getX() + (std::rand() % (2 * radius) - radius))) % scene->getWidth(),
     //             std::abs(position.getY() + (std::rand() % (2 * radius) - radius)) % scene->getHeight());
-    return Vec2i(400, 400);
+    std::srand(std::time(0));
+    return Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10));
 }
 }
