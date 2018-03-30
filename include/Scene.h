@@ -47,8 +47,6 @@ public:
     bool canAttack(Character *c1, Character *c2);
     Vec2i getRandomEmptyPosition();
     const std::map<std::string, std::string> &getPlayers() const;
-    void acquireObjects();
-    void releaseObjects();
     Character* spawnCharacter(std::string name, std::string luaCode);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
@@ -62,7 +60,7 @@ private:
     void restart();
 
     void acquireObjects();
-    void releaseObjects()
+    void releaseObjects();
 
     //lua methods
     int luaGetObjects(lua_State *L);
