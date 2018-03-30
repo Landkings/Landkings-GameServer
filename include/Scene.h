@@ -47,7 +47,8 @@ public:
     bool canAttack(Character *c1, Character *c2);
     Vec2i getRandomEmptyPosition();
     const std::map<std::string, std::string> &getPlayers() const;
-    Character* spawnCharacter(std::string name, std::string luaCode);
+    void spawnPlayer(std::string name, std::string luaCode);
+    void spawnCharacter(std::string name, std::string luaCode);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);
@@ -84,7 +85,7 @@ private:
     Tile grass;
     SafeZone *safeZone;
     std::unordered_map<std::string, ObjectSpawner*> spawners;
-    ObjectSpawner *characterSpawner;
+    std::unordered_map<std::string, ObjectSpawner*> characterSpawners;
 };
 
 }
