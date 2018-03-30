@@ -53,7 +53,8 @@ namespace Engine {
 #define OBJECT_TYPE \
     E(Player, Player, ObjectType) \
     E(HealingItem, HealingItem, ObjectType) \
-    E(ExpItem, ExpItem, ObjectType)
+    E(ExpItem, ExpItem, ObjectType) \
+    E(NPC, NPC, ObjectType)
 
 #define E C_ENUM_HELPER
 enum class Action {
@@ -115,6 +116,21 @@ const Vec2i directions[4] = {
         Vec2i(0, 1),
         Vec2i(-1, 0)
 };
+
+    struct ParametersHasher {
+        std::size_t operator()(const Parameters &p) const {
+            return std::hash<int>()(1);
+        }
+    };
+
+//namespace std {
+//    template<>
+//    struct hash<Parameters> {
+//        size_t operator()(const Parameters &p) const {
+//            return std::hash<Parameters>()(p);
+//        }
+//    };
+//}
 
 class GameObject {
 public:
@@ -211,8 +227,8 @@ private:
 
 class Character : public GameObject {
 public:
-    Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
-    Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
+    Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20), ObjectType type = ObjectType::Player);
+    Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i(), ObjectType type = ObjectType::Player);
     //int write(lua_State *state);
     void update();
     void luaPush(lua_State *state) override;
@@ -343,11 +359,20 @@ protected:
     int currentExp;
     int skillPoints;
     bool usingAction;
-    std::unordered_map<Parameters, int> parameters;
+    std::unordered_map<Parameters, int, ParametersHasher> parameters;
     SpriteDirection spriteDirection;
     Inventory inventory;
     lua_State *L;
 };
 typedef std::shared_ptr<Character> PCharacter;
+
+class Player : public Character {
+public:
+    Player(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20)) :
+            Character(scene, pos, tmpLuaName, hbox, ObjectType::Player) {}
+    Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i()) :
+            Character(scene, luaCode, name, pos, ObjectType::Player) {}
+};
+typedef std::shared_ptr<Player> PPlayer;
 
 }

@@ -3,9 +3,9 @@
 #include <thread>
 #include <cstring>
 #include <iostream>
+#include <string_view>
 
 using namespace std;
-
 
 Log::Log() : _stream(cout), _curBlockPos(0u)
 {

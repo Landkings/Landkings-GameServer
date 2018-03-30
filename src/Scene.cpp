@@ -21,14 +21,18 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     height(Constants::SCENE_HEIGHT / Constants::TILE_HEIGHT),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
-    characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
-                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/))),
+//    characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
+//                                                                                          height * 4 /* * Constants::TILE_HEIGHT*/))),
     safeZone(new SafeZone(this, Vec2i(0, 0))) {
     tiles.resize(height);
     //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
     //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
     spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0, 99),
                                         Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 100, 30000);
+    characterSpawners["player"] = new ObjectSpawner(this, new Player(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
+                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/));
+    characterSpawners["character"] = new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
+                                                                                                       height * 4 /* * Constants::TILE_HEIGHT*/));
 
     //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
@@ -146,12 +150,17 @@ void Scene::addObject(GameObject *obj) {
     objects.push_back(obj);
 }
 
-Character* Scene::spawnCharacter(std::string name, std::string luaCode) {
-    Character* character;
-    character = (Character*)characterSpawner->spawn(characters);
-    character->loadLuaCode(luaCode);
+void Scene::spawnPlayer(std::string name, std::string luaCode) {
+    Player* player = (Player*)characterSpawners["player"]->spawn(characters);
+    player->loadLuaCode(luaCode);
+    player->setName(name);
+    players.insert(std::make_pair(name, luaCode));
+}
+
+void Scene::spawnCharacter(std::string name, std::string luaCode) {
+    Character *character = (Character*)characterSpawners["character"]->spawn(characters);
     character->setName(name);
-    return character;
+    character->loadLuaCode(luaCode);
 }
 
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
@@ -159,10 +168,7 @@ void Scene::addPlayer(std::string playerName, std::string luaCode) {
     acquireObjects();
     auto it = players.find(playerName);
     if (it == players.end() || !(player = (Character*)getPlayer(playerName))) {
-        player = (Character*)characterSpawner->spawn(characters);
-        player->loadLuaCode(luaCode);
-        player->setName(playerName);
-        players.insert(std::make_pair(playerName, luaCode));
+        spawnPlayer(playerName, luaCode);
 //        characters.push_back(player);
     }
     else {
@@ -303,9 +309,7 @@ void Scene::restart() {
     objects.clear();
     safeZone = new SafeZone(this, Vec2i(0, 0));
     for (auto& player : players) {
-        Character *obj = (Character*)characterSpawner->spawn(characters);
-        obj->loadLuaCode(player.second);
-        obj->setName(player.first);
+        spawnCharacter(player.first, player.second);
     }
 }
 

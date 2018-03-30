@@ -7,8 +7,8 @@ using namespace Engine;
 GameObject::GameObject(Scene *scene, ObjectType type, Vec2i pos, std::string name, HitBox hbox) :
     scene(scene), position(pos), hbox(hbox), name(name), type(type) {}
 
-Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbox) :
-    GameObject(scene, ObjectType::Player, pos, "", hbox),
+Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbox, ObjectType type) :
+    GameObject(scene, type, pos, "", hbox),
     inventory(20) {
     init();
     if (luaL_loadfile(L, tmpLuaName.c_str()) || lua_pcall(L, 0, 0, 0)) {
@@ -16,8 +16,8 @@ Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbo
     }
 }
 
-Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos) :
-    GameObject(scene, ObjectType::Player, pos, name, HitBox(20, 20)),
+Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos, ObjectType type) :
+    GameObject(scene, type, pos, name, HitBox(20, 20)),
     inventory(20) {
     init();
     loadLuaCode(luaCode);

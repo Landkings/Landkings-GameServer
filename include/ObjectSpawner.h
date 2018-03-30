@@ -35,6 +35,7 @@ public:
         }
         return newObj;
     }
+
     void clear() { objectsCount = 0; }
 private:
     Vec2i getRandomPosition();
@@ -47,5 +48,28 @@ private:
     int spawnCoolDown;
     int lastSpawn;
 };
+
+//class CharacterSpawner : public ObjectSpawner {
+//    CharacterSpawner(Scene *scene, Character *prototype, Vec2i minBoundaries,
+//                     Vec2i maxBoundaries, int objectsLimit = -1, int spawnCoolDown = -1) :
+//        ObjectSpawner(scene, prototype, minBoundaries, maxBoundaries, objectsLimit, spawnCoolDown) {
+//    }
+//
+////    template<typename T>
+////    Character *spawn(std::map<std::string, std::string> &container) {
+////        Character *newObj = nullptr;
+////        if ((lastSpawn + spawnCoolDown <= scene->getTime() && objectsCount < objectsLimit) || objectsLimit < 0 ||
+////            spawnCoolDown < 0) {
+////            ++objectsCount;
+////            Vec2i finalPosition = getRandomPosition();
+////            while (scene->checkAllCollisions(prototype, &finalPosition))
+////                finalPosition = getRandomPosition(); //implement better logic
+////            newObj = prototype->clone();
+////            newObj->setPosition(finalPosition);
+////            container.push_back((T*)newObj);
+////        }
+////        return newObj;
+////    }
+//};
 
 }
