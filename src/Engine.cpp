@@ -44,9 +44,20 @@ void Engine::Engine::init()
         log.write("Can't connect");
 }
 
+std::string Engine::Engine::readCode(std::string fileName) {
+    std::ifstream input(fileName, std::ios::binary);
+    std::stringstream luaCode;
+    luaCode << input.rdbuf();
+    return luaCode.str();
+}
+
 void Engine::Engine::mainLoop()
 {
-    //scene.addObject(new Character(&scene, Position(20, 20), "p1.lua"));
+//    scene.addObject(new Character(&scene, "p1.lua", "ilya", Vec2i(20, 20)));
+    scene.addPlayer("John", readCode("p1.lua"));
+    for (int i = 0; i < 10; i++) {
+        scene.spawnCharacter("monster", readCode("p1.lua"));
+    }
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
