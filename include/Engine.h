@@ -13,6 +13,7 @@
 #include <rapidjson/document.h>
 
 #include <uWS/uWS.h>
+#include <array>
 
 #include "Scene.h"
 #include "GameObject.h"
@@ -60,6 +61,8 @@ private:
     std::chrono::time_point<std::chrono::system_clock, std::chrono::seconds> startPoint;
 
     // *****************
+
+    std::string readCode(std::string fileName);
 
     void update();
 

@@ -6,6 +6,7 @@
 #include <map>
 #include <unordered_map>
 #include <atomic>
+#include <fstream>
 
 #include <rapidjson/stringbuffer.h>
 
@@ -45,6 +46,10 @@ public:
     bool canMove(Character *c, Vec2i newPos);
     bool canAttack(Character *c1, Character *c2);
     Vec2i getRandomEmptyPosition();
+    const std::map<std::string, std::string> &getPlayers() const;
+    void acquireObjects();
+    void releaseObjects();
+    Character* spawnCharacter(std::string name, std::string luaCode);
 private:
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);

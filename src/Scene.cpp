@@ -5,6 +5,8 @@
 
 #include <iomanip>
 #include <thread>
+#include <string>
+#include <sstream>
 
 #include <rapidjson/document.h>
 #include <rapidjson/writer.h>
@@ -16,7 +18,7 @@ using namespace rapidjson;
 //public methods
 
 Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
-    height(Constants::SCENE_HEIGHT  / Constants::TILE_HEIGHT),
+    height(Constants::SCENE_HEIGHT / Constants::TILE_HEIGHT),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
     characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
@@ -101,23 +103,25 @@ void Scene::attack(Character *c1, Character *c2) {
 }
 
 void Scene::update() {
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+    acquireObjects();
     if (characters.size() <= 1 && players.size() > 1) {
         restart();
-        objectsAcquired.store(false);
+        releaseObjects();
         return;
     }
     safeZone->update();
-    for (auto& spawner : spawners) {
-        spawner.second->spawn(objects);
-    }
+
+//    std::ifstream input("p1.lua", std::ios::binary);
+//    std::stringstream luaCode;
+//    luaCode << input.rdbuf();
+//    Character *character;
+//    character = (Character*)characterSpawner->spawn(characters);
+//    character->loadLuaCode(luaCode.str());
+//    character->setName("monster");
+//
+//    for (auto& spawner : spawners) {
+//        spawner.second->spawn(objects);
+//    }
 
     for (auto& character : characters) {
         if (character->getNextStaminaRegenTime() <= time)
@@ -135,36 +139,37 @@ void Scene::update() {
     }
     clearCorpses();
     ++time;
-    objectsAcquired.store(false);
+    releaseObjects();
 }
 
 void Scene::addObject(GameObject *obj) {
     objects.push_back(obj);
 }
 
+Character* Scene::spawnCharacter(std::string name, std::string luaCode) {
+    Character* character;
+    character = (Character*)characterSpawner->spawn(characters);
+    character->loadLuaCode(luaCode);
+    character->setName(name);
+    return character;
+}
+
 void Scene::addPlayer(std::string playerName, std::string luaCode) {
     Character* player;
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+    acquireObjects();
     auto it = players.find(playerName);
     if (it == players.end() || !(player = (Character*)getPlayer(playerName))) {
         player = (Character*)characterSpawner->spawn(characters);
         player->loadLuaCode(luaCode);
         player->setName(playerName);
         players.insert(std::make_pair(playerName, luaCode));
-        //characters.push_back(player);
+//        characters.push_back(player);
     }
     else {
         it->second = luaCode;
         player->loadLuaCode(luaCode);
     }
-    objectsAcquired.store(false);
+    releaseObjects();
 }
 
 void Scene::luaPush(lua_State *L) {
@@ -271,7 +276,7 @@ GameObject *Scene::getPlayer(std::string &playerName) {
 void Scene::clearCorpses() {
     for (int i = characters.size() - 1; i >= 0; --i) {
         if (characters[i]->getHp() <= 0) {
-            //players.erase(characters[i]->getID()); //comment to respawn
+//            players.erase(characters[i]->getID()); //comment to respawn
             delete characters[i];
             characters.erase(characters.begin() + i);
         }
@@ -321,14 +326,7 @@ Vec2i Scene::getRandomEmptyPosition() {
 }
 
 void Scene::createObjectsMessage(StringBuffer& buffer) {
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-        }
-    }
+    acquireObjects();
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
@@ -373,7 +371,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
 
     Writer<StringBuffer> writer(buffer);
     doc.Accept(writer);
-    objectsAcquired.store(false);
+    releaseObjects();
 }
 
 void Scene::createMapMessage(StringBuffer& buffer) {
@@ -407,6 +405,21 @@ void Scene::createMapMessage(StringBuffer& buffer) {
     doc.Accept(writer);
 }
 
+void Scene::acquireObjects()
+{
+    bool cur = false;
+    while (!objectsAcquired.compare_exchange_strong(cur, true))
+    {
+        cur = false;
+        std::this_thread::sleep_for(std::chrono::nanoseconds(25));
+    }
+}
+
+void Scene::releaseObjects()
+{
+    objectsAcquired.exchange(false);
+}
+
 //lua methods
 
 int Scene::luaGetObjects(lua_State *L) {
@@ -414,10 +427,10 @@ int Scene::luaGetObjects(lua_State *L) {
     lua_newtable(L);
     int i = 1;
     for (auto& object : characters) {
-        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
+//        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
             ((Character*)object)->luaPush(L);
             lua_rawseti(L, -2, i++);
-        }
+//        }
         //lua_pushinteger(L, i++);
     }
     return 1;
@@ -436,4 +449,8 @@ int Scene::luaGetWidth(lua_State *state) {
 int Scene::luaGetHeight(lua_State *state) {
     lua_pushinteger(state, height * Constants::TILE_HEIGHT);
     return 1;
+}
+
+const std::map<std::string, std::string> &Scene::getPlayers() const {
+    return players;
 }
