@@ -350,6 +350,7 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
     doc.AddMember("messageType", messageType, allc);
 
     Value players(kArrayType);
+    Value npcs(kArrayType);
     Value nick(kStringType);
     Value circle(kObjectType);
     Value items(kArrayType);
@@ -365,9 +366,13 @@ void Scene::createObjectsMessage(StringBuffer& buffer) {
         player.AddMember("lv", character->getLevel(), allc);
         nick.SetString(character->getID().data(), allc);
         player.AddMember("id", nick, allc);
-        players.PushBack(player, allc);
+        if (character->getType() == ObjectType::Player)
+            players.PushBack(player, allc);
+        else
+            npcs.PushBack(player, allc);
     }
     doc.AddMember("players", players, allc);
+    doc.AddMember("npcs", npcs, allc);
 
     for (auto& object : objects) {
         Value item(kObjectType);

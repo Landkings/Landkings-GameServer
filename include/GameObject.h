@@ -227,8 +227,8 @@ private:
 
 class Character : public GameObject {
 public:
-    Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20), ObjectType type = ObjectType::Player);
-    Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i(), ObjectType type = ObjectType::Player);
+    Character(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20), ObjectType type = ObjectType::NPC);
+    Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i(), ObjectType type = ObjectType::NPC);
     //int write(lua_State *state);
     void update();
     void luaPush(lua_State *state) override;
