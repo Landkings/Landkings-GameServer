@@ -17,7 +17,7 @@ using namespace rapidjson;
 
 //public methods
 
-Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
+Scene::Scene() : flower(true, 2), grass(true, 1), land(true, 0), wall(false, 2),
     height(Constants::SCENE_HEIGHT / Constants::TILE_HEIGHT),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
@@ -33,8 +33,19 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
     for (auto& row : tiles) {
-        //row.resize(width, (k++ % 2) ? &land : &grass);
-        row.resize(width, &grass);
+//        row.resize(width, rand() % 10 == 9 ? &land : &grass);
+//        row.resize(width, &land);
+//        for (int i = 0; i < width; i++) {
+//            row.push_back(rand() % 10 == 9 ? &land : &grass);
+//        }
+        for (int i = 0; i < width; i++) {
+            int index = rand() % 10;
+            switch (rand() % 10) {
+                case 8: row.push_back(&flower); break;
+                case 9: row.push_back(&grass); break;
+                default: row.push_back(&land); break;
+            }
+        }
     }
     tiles[1][4] =  &land;
 //    tiles[10][13] =  &wall;
