@@ -21,8 +21,6 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     height(Constants::SCENE_HEIGHT / Constants::TILE_HEIGHT),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
-//    characterSpawner(new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
-//                                                                                          height * 4 /* * Constants::TILE_HEIGHT*/))),
     safeZone(new SafeZone(this, Vec2i(std::rand() % (Constants::SCENE_HEIGHT / 10) , rand() % (Constants::SCENE_WIDTH / 10)))) {
     std::srand(unsigned(std::time(0)));
     tiles.resize(height);
@@ -30,11 +28,8 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
     spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0, 99),
                                         Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 100, 30000);
-    characterSpawners["player"] = new ObjectSpawner(this, new Player(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
-                                                                                             height * 4 /* * Constants::TILE_HEIGHT*/));
-    characterSpawners["character"] = new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(width * 4 /* * Constants::TILE_WIDTH*/,
-                                                                                                       height * 4 /* * Constants::TILE_HEIGHT*/));
-
+    characterSpawners["player"] = new ObjectSpawner(this, new Player(this, "", ""), Vec2i(0, 0), Vec2i(Constants::SCENE_WIDTH - 40, Constants::SCENE_HEIGHT - 40));
+    characterSpawners["character"] = new ObjectSpawner(this, new Character(this, "", ""), Vec2i(0, 0), Vec2i(Constants::SCENE_WIDTH - 40, Constants::SCENE_HEIGHT - 40));
     //TOOD: add loading map from somewhere or generating
     //int k = 0; //delete
     for (auto& row : tiles) {
@@ -43,6 +38,15 @@ Scene::Scene() : grass(true, 1), land(true, 0), wall(false, 2),
     }
     tiles[1][4] =  &land;
 //    tiles[10][13] =  &wall;
+
+    spawnNPCs();
+}
+
+std::string Scene::readCode(std::string fileName) {
+    std::ifstream input(fileName, std::ios::binary);
+    std::stringstream luaCode;
+    luaCode << input.rdbuf();
+    return luaCode.str();
 }
 
 void Scene::move(GameObject *object, const Vec2i &newPos) {
@@ -109,24 +113,17 @@ void Scene::attack(Character *c1, Character *c2) {
 
 void Scene::update() {
     acquireObjects();
-    if (characters.size() <= 1 && players.size() > 1) {
+    int livingPlayers = 0;
+    for (auto& character: characters)
+        if (character->getType() == ObjectType::Player)
+            livingPlayers++;
+    if (livingPlayers == 0 || characters.size() == 1) {
+//    if (players.size() > livingPlayers) {
         restart();
         releaseObjects();
         return;
     }
     safeZone->update();
-
-//    std::ifstream input("p1.lua", std::ios::binary);
-//    std::stringstream luaCode;
-//    luaCode << input.rdbuf();
-//    Character *character;
-//    character = (Character*)characterSpawner->spawn(characters);
-//    character->loadLuaCode(luaCode.str());
-//    character->setName("monster");
-//
-//    for (auto& spawner : spawners) {
-//        spawner.second->spawn(objects);
-//    }
 
     for (auto& character : characters) {
         if (character->getNextStaminaRegenTime() <= time)
@@ -138,7 +135,7 @@ void Scene::update() {
 
         if (!safeZone->inZone(character)) {
             if (!(getTime() % 500))
-                character->takeDamage(1);
+                character->takeDamage(2);
             character->disableStaminaRegen();
         }
     }
@@ -290,6 +287,13 @@ void Scene::clearCorpses() {
     }
 }
 
+void Scene::spawnNPCs() {
+    int countPfM = 5; // TODO : random count monsters
+    for (int i = 0; i < countPfM; i++) {
+        spawnCharacter("zombie", readCode("zombie.lua"));
+    }
+}
+
 void Scene::restart() {
     delete safeZone;
     for (int i = 0; i < characters.size(); ++i)
@@ -312,8 +316,9 @@ void Scene::restart() {
     safeZone = new SafeZone(this, Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10)));
     srand(std::time(0));
     for (auto& player : players) {
-        spawnCharacter(player.first, player.second);
+        spawnPlayer(player.first, player.second);
     }
+    spawnNPCs();
 }
 
 bool Scene::canAttack(Character *c1, Character *c2) {
@@ -446,10 +451,10 @@ int Scene::luaGetObjects(lua_State *L) {
     lua_newtable(L);
     int i = 1;
     for (auto& object : characters) {
-//        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
+        if (object != player && (player->getPosition() - object->getPosition()).abs() <= player->getVisionRange()) {
             ((Character*)object)->luaPush(L);
             lua_rawseti(L, -2, i++);
-//        }
+        }
         //lua_pushinteger(L, i++);
     }
     return 1;

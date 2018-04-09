@@ -17,7 +17,7 @@ Character::Character(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbo
 }
 
 Character::Character(Scene *scene, std::string luaCode, std::string name, Vec2i pos, ObjectType type) :
-    GameObject(scene, type, pos, name, HitBox(20, 20)),
+    GameObject(scene, type, pos, name, HitBox(32, 23)),
     inventory(20) {
     init();
     loadLuaCode(luaCode);
@@ -241,18 +241,58 @@ void Character::init() {
     direction = Direction::Unknown;
     attackType = AttackType::Fast;
     movementType = MovementType::Default;
-    maxHitPoints = 100;
+    maxHitPoints = 50;
     hitPoints = maxHitPoints;
-    damage = 10;    //TODO: replace with constants
-    speed = 5;
+    damage = 4;    //TODO: replace with constants
+    speed = 2;
     nextMoveTime = 0;
     nextAttackTime = 0;
     nextStaminaRegenTime = 0;
-    moveCooldown = 16;
-    attackCooldown = 400; //160
+    moveCooldown = 40;
+    attackCooldown = 500; //160
     maxStamina = 100;
     attackRange = 30;
-    visionRange = 500;
+    visionRange = 100;
+    stamina = maxStamina;
+    attackDirection = AttackDirection::Torso;
+    blockDirection = AttackDirection::Torso;
+    spriteDirection = SpriteDirection::Down;
+    maxStaminaTicks = 0;
+    maxStaminaTicksRequirement = attackCooldown * 10;
+    isStaminaHpRegenAvailable = true;
+    isStaminaRegenAvailable = true;
+    attackStaminaCost = 0;
+    moveStaminaCost = 0;
+    sprintStaminaCost = 0;
+    blockStaminaCost = 0;
+    level = 1;
+    nextLevelExp = 500;
+    skillPoints = 0;
+    currentExp = 0;
+    usingAction = false;
+    for (int i = 0; i < (int)Parameters::Size; ++i)
+        parameters[(Parameters)i] = 0;
+    initLuaState();
+}
+
+void Player::init() {
+    target = nullptr;
+    action = Action::Empty;
+    direction = Direction::Unknown;
+    attackType = AttackType::Fast;
+    movementType = MovementType::Default;
+    maxHitPoints = 100;
+    hitPoints = maxHitPoints;
+    damage = 10;    //TODO: replace with constants
+    speed = 3;
+    nextMoveTime = 0;
+    nextAttackTime = 0;
+    nextStaminaRegenTime = 0;
+    moveCooldown = 25;
+    attackCooldown = 400; //160
+    maxStamina = 400;
+    attackRange = 30;
+    visionRange = 150;
     stamina = maxStamina;
     attackDirection = AttackDirection::Torso;
     blockDirection = AttackDirection::Torso;
@@ -273,6 +313,16 @@ void Character::init() {
     for (int i = 0; i < (int)Parameters::Size; ++i)
         parameters[(Parameters)i] = 0;
     initLuaState();
+}
+
+Player::Player(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbox) :
+        Character(scene, pos, tmpLuaName, hbox, ObjectType::Player) {
+    init();
+}
+
+Player::Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos) :
+        Character(scene, luaCode, name, pos, ObjectType::Player) {
+    init();
 }
 
 void Character::closeLuaState() {
@@ -367,7 +417,8 @@ void Character::initLuaState() {
 }
 
 void Character::attack() {
-    if (target && target->getType() == ObjectType::Player) {
+    if (target && (target->getType() == ObjectType::Player ||
+            target->getType() == ObjectType::NPC)) {
         scene->attack(this, (Character*)target);
     }
 }
@@ -637,7 +688,7 @@ int Character::luaCanAttack(lua_State *state) {
 }
 
 int Character::luaGetObjectType(lua_State *state) {
-    lua_pushinteger(state, (int)ObjectType::Player);
+    lua_pushinteger(state, (int)type);
     return 1;
 }
 

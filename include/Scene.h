@@ -50,6 +50,8 @@ public:
     void spawnPlayer(std::string name, std::string luaCode);
     void spawnCharacter(std::string name, std::string luaCode);
 private:
+    void spawnNPCs();
+    std::string readCode(std::string fileName);
     bool validPosition(const Vec2i &pos, const HitBox &hbox);
     Vec2i findDirection(GameObject *from, GameObject *to);
     bool isCollide(const GameObject *first, const GameObject *second);
