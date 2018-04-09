@@ -251,75 +251,75 @@ public:
     ~Character();
 
     //getters and setters
-    int getSpeed() const { return speed; }
-    int getHp() const { return hitPoints; }
-    void setHp(const int hp) { hitPoints = hp; }
-    const int getMaxHp() { return maxHitPoints + 10 * parameters[Parameters::HitPoints]; } //TODO: replace with constant
-    const int getStamina() { return stamina; }
-    const int getMaxStamina() { return maxStamina + 10 * parameters[Parameters::StaminaPoints]; } //TODO: replace with constant
-    const int getDamage() { return damage + 1 * parameters[Parameters::AttackDamage]; } //TODO: replace with constant
-    void setDirection(const Direction dir) { direction = dir; }
-    void setTarget (GameObject *targ) { target = targ; }
-    const int getMoveCooldown() { return std::max(0, moveCooldown - 1 * parameters[Parameters::MovementSpeed]); } //TODO: replace with constant
-    const int getAttackCooldown() { return std::max(0, attackCooldown - 10 * parameters[Parameters::AttackSpeed]); } //TODO: replace with constant
-    long long getNextMoveTime() const { return nextMoveTime; }    
-    long long getNextAttackTime() const {return nextAttackTime; }
-    const int getVisionRange() { return visionRange + 50 * parameters[Parameters::VisionRange]; }
-    SpriteDirection getSpriteDirection() const { return spriteDirection; }
-    bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
-    const int getAttackRange() { return attackRange + 5 * parameters[Parameters::AttackRange]; } //TODO: replace with constants
-    AttackType getAttackType() const { return attackType; }
-    AttackDirection getBlockDirection() const { return blockDirection; }
-    AttackDirection getAttackDirection() const { return attackDirection; }
-    long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
-    const int getAttackStaminaCost() const { return attackStaminaCost; }
-    const int getMoveStaminaCost() const { return moveStaminaCost; }
-    const int getBlockStaminaCost() const { return blockStaminaCost; }
-    const int getSprintStaminaCost() const { return sprintStaminaCost; }
-    const int getLevel() { return level; }
-    void disableStaminaRegen() { isStaminaRegenAvailable = false; }
-    void enableStaminaRegen() { isStaminaRegenAvailable = true; }
-    bool isUsingAction() { return usingAction; }
+    virtual int getSpeed() const { return speed; }
+    virtual int getHp() const { return hitPoints; }
+    virtual void setHp(const int hp) { hitPoints = hp; }
+    virtual const int getMaxHp() { return maxHitPoints + 10 * parameters[Parameters::HitPoints]; } //TODO: replace with constant
+    virtual const int getStamina() { return stamina; }
+    virtual const int getMaxStamina() { return maxStamina + 10 * parameters[Parameters::StaminaPoints]; } //TODO: replace with constant
+    virtual const int getDamage() { return damage + 1 * parameters[Parameters::AttackDamage]; } //TODO: replace with constant
+    virtual void setDirection(const Direction dir) { direction = dir; }
+    virtual void setTarget (GameObject *targ) { target = targ; }
+    virtual const int getMoveCooldown() { return std::max(0, moveCooldown - 1 * parameters[Parameters::MovementSpeed]); } //TODO: replace with constant
+    virtual const int getAttackCooldown() { return std::max(0, attackCooldown - 10 * parameters[Parameters::AttackSpeed]); } //TODO: replace with constant
+    virtual long long getNextMoveTime() const { return nextMoveTime; }
+    virtual long long getNextAttackTime() const {return nextAttackTime; }
+    virtual const int getVisionRange() { return visionRange + 50 * parameters[Parameters::VisionRange]; }
+    virtual SpriteDirection getSpriteDirection() const { return spriteDirection; }
+    virtual bool isOnCooldown() const { return nextAttackTime > scene->getTime() || nextMoveTime > scene->getTime(); }
+    virtual const int getAttackRange() { return attackRange + 5 * parameters[Parameters::AttackRange]; } //TODO: replace with constants
+    virtual AttackType getAttackType() const { return attackType; }
+    virtual AttackDirection getBlockDirection() const { return blockDirection; }
+    virtual AttackDirection getAttackDirection() const { return attackDirection; }
+    virtual long long getNextStaminaRegenTime() const { return nextStaminaRegenTime; }
+    virtual const int getAttackStaminaCost() const { return attackStaminaCost; }
+    virtual const int getMoveStaminaCost() const { return moveStaminaCost; }
+    virtual const int getBlockStaminaCost() const { return blockStaminaCost; }
+    virtual const int getSprintStaminaCost() const { return sprintStaminaCost; }
+    virtual const int getLevel() { return level; }
+    virtual void disableStaminaRegen() { isStaminaRegenAvailable = false; }
+    virtual void enableStaminaRegen() { isStaminaRegenAvailable = true; }
+    virtual bool isUsingAction() { return usingAction; }
 protected:
-    void init();
-    void initLuaState();
-    void closeLuaState();
-    void move();
-    void attack();
-    void block();
-    void takeItem();
+    virtual void init();
+    virtual void initLuaState();
+    virtual void closeLuaState();
+    virtual void move();
+    virtual void attack();
+    virtual void block();
+    virtual void takeItem();
 
     //lua functions
-    int luaSetAction(lua_State *state);
-    int luaGetAction(lua_State *state);
-    int luaSetDirection(lua_State *state);
-    int luaGetDirection(lua_State *state);
-    int luaSetTarget(lua_State *state);
-    int luaGetTarget(lua_State *state);
-    int luaGetPosition(lua_State *state);
-    int luaGetObjectPosition(lua_State *state);
-    int luaGetStamina(lua_State *state);
-    int luaGetHp(lua_State *state);
-    int luaSetAttackType(lua_State *state);
-    int luaSetAttackDirection(lua_State *state);
-    int luaSetBlockDirection(lua_State *state);
-    int luaSetMovementType(lua_State *state);
-    int luaGetMovementType(lua_State *state);
-    int luaGetMe(lua_State *state); //maybe delete
-    int luaGetAttackStaminaCost(lua_State *state);
-    int luaGetMoveStaminaCost(lua_State *state);
-    int luaGetBlockStaminaCost(lua_State *state);
-    int luaGetSprintStaminaCost(lua_State *state);
-    int luaLevelUp(lua_State *state);
-    int luaGetAvailableSkillPoints(lua_State *state);
-    int luaGetCurrentExp(lua_State *state);
-    int luaGetNextLevelExp(lua_State *state);
-    int luaGetParameterLevel(lua_State *state);
-    int luaGetParameterLevelUpCost(lua_State *state);
-    int luaCanMove(lua_State *state);
-    int luaUseItem(lua_State *state);
-    int luaCanAttack(lua_State *state);
-    int luaGetObjectType(lua_State *state);
+    virtual int luaSetAction(lua_State *state);
+    virtual int luaGetAction(lua_State *state);
+    virtual int luaSetDirection(lua_State *state);
+    virtual int luaGetDirection(lua_State *state);
+    virtual int luaSetTarget(lua_State *state);
+    virtual int luaGetTarget(lua_State *state);
+    virtual int luaGetPosition(lua_State *state);
+    virtual int luaGetObjectPosition(lua_State *state);
+    virtual int luaGetStamina(lua_State *state);
+    virtual int luaGetHp(lua_State *state);
+    virtual int luaSetAttackType(lua_State *state);
+    virtual int luaSetAttackDirection(lua_State *state);
+    virtual int luaSetBlockDirection(lua_State *state);
+    virtual int luaSetMovementType(lua_State *state);
+    virtual int luaGetMovementType(lua_State *state);
+    virtual int luaGetMe(lua_State *state); //maybe delete
+    virtual int luaGetAttackStaminaCost(lua_State *state);
+    virtual int luaGetMoveStaminaCost(lua_State *state);
+    virtual int luaGetBlockStaminaCost(lua_State *state);
+    virtual int luaGetSprintStaminaCost(lua_State *state);
+    virtual int luaLevelUp(lua_State *state);
+    virtual int luaGetAvailableSkillPoints(lua_State *state);
+    virtual int luaGetCurrentExp(lua_State *state);
+    virtual int luaGetNextLevelExp(lua_State *state);
+    virtual int luaGetParameterLevel(lua_State *state);
+    virtual int luaGetParameterLevelUpCost(lua_State *state);
+    virtual int luaCanMove(lua_State *state);
+    virtual int luaUseItem(lua_State *state);
+    virtual int luaCanAttack(lua_State *state);
+    virtual int luaGetObjectType(lua_State *state);
 
     void luaCountHook(lua_State *state, lua_Debug *ar);
 
@@ -368,10 +368,10 @@ typedef std::shared_ptr<Character> PCharacter;
 
 class Player : public Character {
 public:
-    Player(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20)) :
-            Character(scene, pos, tmpLuaName, hbox, ObjectType::Player) {}
-    Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i()) :
-            Character(scene, luaCode, name, pos, ObjectType::Player) {}
+    Player(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
+    Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
+protected:
+    void init();
 };
 typedef std::shared_ptr<Player> PPlayer;
 

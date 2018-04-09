@@ -53,13 +53,9 @@ std::string Engine::Engine::readCode(std::string fileName) {
 
 void Engine::Engine::mainLoop()
 {
-//    scene.addObject(new Character(&scene, "p1.lua", "ilya", Vec2i(20, 20)));
     std::srand(unsigned(std::time(0)));
-    scene.addPlayer("John", readCode("p2.lua"));;
-    int countPfM = 5; // TODO : random count monsters
-    for (int i = 0; i < countPfM; i++) {
-        scene.spawnCharacter("peasful monster", readCode("p1.lua"));
-    }
+    scene.addPlayer("johan", readCode("p3.lua"));
+
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;
     int cnt = 0;
