@@ -21,14 +21,6 @@ void SafeZone::update() {
                 radius = zoneTiers[currentZoneTier - 1].radius - progress * (zoneTiers[currentZoneTier - 1].radius - zoneTiers[currentZoneTier].radius);
             }
         }
-        if (zoneTiers.size() - 1  == currentZoneTier) {
-            currentZoneTier = 0;
-            nextZoneTime = scene->getTime() + zoneTiers[0].stayTime;
-            radius = zoneTiers[0].radius;
-            //lastPosition =
-            //position(spawnPosition);
-            //newPosition(spawnPosition);
-        }
     }
     //std::cout << "Radius: " << radius << std::endl;
 }
