@@ -83,6 +83,7 @@ private:
     std::atomic<bool> objectsAcquired;
     //todo replace
     Tile land;
+    Tile flower;
     Tile wall;
     Tile grass;
     SafeZone *safeZone;
