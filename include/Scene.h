@@ -33,6 +33,7 @@ public:
     void move(GameObject *object, GameObject *target);
     void attack(Character *c1, Character *c2);
     void update();
+    void restart();
     void addObject(GameObject *obj);
     void addPlayer(std::string playerName, std::string luaCode);
     void luaPush(lua_State *L);
@@ -40,6 +41,7 @@ public:
     long long getTime() const { return time; }
     void createObjectsMessage(rapidjson::StringBuffer& buffer);
     void createMapMessage(rapidjson::StringBuffer& buffer);
+    void createGameResultMessage(rapidjson::StringBuffer& buffer);
     bool checkAllCollisions(const GameObject *obj, const Vec2i *newPos);
     const int getWidth() { return width * Constants::TILE_WIDTH; }
     const int getHeight() { return height * Constants::TILE_HEIGHT; }
@@ -49,6 +51,7 @@ public:
     const std::map<std::string, std::string> &getPlayers() const;
     void spawnPlayer(std::string name, std::string luaCode);
     void spawnCharacter(std::string name, std::string luaCode);
+    bool isEndOfGame();
 private:
     void spawnNPCs();
     std::string readCode(std::string fileName);
@@ -60,7 +63,6 @@ private:
     bool checkSceneCollision(const GameObject *obj, const Vec2i *newPos);
     GameObject *getPlayer(std::string& playerName);
     void clearCorpses();
-    void restart();
 
     void acquireObjects();
     void releaseObjects();

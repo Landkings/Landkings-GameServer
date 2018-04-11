@@ -122,18 +122,20 @@ void Scene::attack(Character *c1, Character *c2) {
         }
 }
 
-void Scene::update() {
-    acquireObjects();
+bool Scene::isEndOfGame() {
     int livingPlayers = 0;
     for (auto& character: characters)
         if (character->getType() == ObjectType::Player)
             livingPlayers++;
     if (livingPlayers == 0 || characters.size() == 1) {
 //    if (players.size() > livingPlayers) {
-        restart();
-        releaseObjects();
-        return;
+        return true;
     }
+    return false;
+}
+
+void Scene::update() {
+    acquireObjects();
     safeZone->update();
 
     for (auto& character : characters) {
@@ -307,6 +309,7 @@ void Scene::spawnNPCs() {
 }
 
 void Scene::restart() {
+    acquireObjects();
     delete safeZone;
     for (int i = 0; i < characters.size(); ++i)
         delete characters[i];
@@ -331,6 +334,7 @@ void Scene::restart() {
         spawnPlayer(player.first, player.second);
     }
     spawnNPCs();
+    releaseObjects();
 }
 
 bool Scene::canAttack(Character *c1, Character *c2) {
@@ -349,15 +353,31 @@ Vec2i Scene::getRandomEmptyPosition() {
     return Vec2i();
 }
 
-void Scene::createObjectsMessage(StringBuffer& buffer) {
-    {
-        bool cur;
-        while (!objectsAcquired.compare_exchange_strong(cur, true))
-        {
-            cur = false;
-            std::this_thread::sleep_for(std::chrono::nanoseconds(5));
+void Scene::createGameResultMessage(StringBuffer& buffer) {
+    acquireObjects();
+    Document doc(kObjectType);
+    doc.SetObject();
+    Document::AllocatorType& allc = doc.GetAllocator();
+    Value messageType(kStringType);
+    messageType.SetString("GameResult");
+    doc.AddMember("messageType", messageType, allc);
+    Value winner(kObjectType);
+    Value nick(kStringType);
+    nick.SetString("", allc);
+    for (auto& character: characters)
+        if (character->getType() == ObjectType::Player) {
+            nick.SetString(character->getID().data(), allc);
+            break;
         }
-    }
+    winner.AddMember("id", nick, allc);
+    doc.AddMember("winner", winner, allc);
+    Writer<StringBuffer> writer(buffer);
+    doc.Accept(writer);
+    releaseObjects();
+}
+
+void Scene::createObjectsMessage(StringBuffer& buffer) {
+    acquireObjects();
     Document doc(kObjectType);
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
