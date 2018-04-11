@@ -155,7 +155,7 @@ protected:
     HitBox hbox;
     Scene *scene;
     ObjectType type;
-    std::string name; //?
+    std::string name;
 };
 
 class Item : public GameObject {

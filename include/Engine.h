@@ -35,7 +35,7 @@ private:
 
     enum class OutputMessageType
     {
-        unknown = -1, loadMap = 'm', loadObjects = 'o'
+        unknown = -1, loadMap = 'm', loadObjects = 'o', loadGameResult = 'r'
     };
 
 

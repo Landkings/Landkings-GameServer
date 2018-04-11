@@ -117,6 +117,14 @@ void Engine::Engine::terminate()
 // *** FUNCTIONS ***
 
 void Engine::Engine::update() {
+    if (scene.isEndOfGame()) {
+        StringBuffer buffer;
+        setMessageType(OutputMessageType::loadGameResult, buffer);
+        scene.createGameResultMessage(buffer);
+        msSocket->send(buffer.GetString(), buffer.GetLength(), uWS::TEXT);
+        scene.restart();
+        return;
+    }
     scene.update();
 }
 
