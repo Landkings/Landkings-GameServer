@@ -251,7 +251,7 @@ void Character::init() {
     moveCooldown = 40;
     attackCooldown = 500; //160
     maxStamina = 100;
-    attackRange = 30;
+    attackRange = 45;
     visionRange = 100;
     stamina = maxStamina;
     attackDirection = AttackDirection::Torso;
@@ -291,7 +291,7 @@ void Player::init() {
     moveCooldown = 25;
     attackCooldown = 400; //160
     maxStamina = 400;
-    attackRange = 30;
+    attackRange = 45;
     visionRange = 150;
     stamina = maxStamina;
     attackDirection = AttackDirection::Torso;
@@ -417,8 +417,9 @@ void Character::initLuaState() {
 }
 
 void Character::attack() {
-    if (target && (target->getType() == ObjectType::Player ||
-            target->getType() == ObjectType::NPC)) {
+    if (target)
+    if (target->getType() == ObjectType::Player ||
+            target->getType() == ObjectType::NPC) {
         scene->attack(this, (Character*)target);
     }
 }

@@ -294,7 +294,7 @@ void Scene::clearCorpses() {
     for (int i = characters.size() - 1; i >= 0; --i) {
         if (characters[i]->getHp() <= 0) {
 //            players.erase(characters[i]->getID()); //comment to respawn
-            characters[i] = nullptr;
+            characters[i] = nullptr;//TODO: fix memory loss
             delete characters[i];
             characters.erase(characters.begin() + i);
         }
