@@ -248,7 +248,7 @@ void Character::init() {
     nextMoveTime = 0;
     nextAttackTime = 0;
     nextStaminaRegenTime = 0;
-    moveCooldown = 40;
+    moveCooldown = 4;
     attackCooldown = 500; //160
     maxStamina = 100;
     attackRange = 45;
@@ -288,7 +288,7 @@ void Player::init() {
     nextMoveTime = 0;
     nextAttackTime = 0;
     nextStaminaRegenTime = 0;
-    moveCooldown = 25;
+    moveCooldown = 2;
     attackCooldown = 400; //160
     maxStamina = 400;
     attackRange = 45;

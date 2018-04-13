@@ -362,7 +362,7 @@ void Scene::createGameResultMessage(StringBuffer& buffer) {
     doc.SetObject();
     Document::AllocatorType& allc = doc.GetAllocator();
     Value messageType(kStringType);
-    messageType.SetString("GameResult");
+    messageType.SetString("loadGameResult");
     doc.AddMember("messageType", messageType, allc);
     Value winner(kObjectType);
     Value nick(kStringType);
