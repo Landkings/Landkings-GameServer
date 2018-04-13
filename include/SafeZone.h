@@ -16,26 +16,15 @@ public:
 class SafeZone {
 public:
     SafeZone() {}
-    SafeZone(Scene* scene, Vec2i spawnPosition, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
-            ZoneTier(100, 1000, 10000),
-            ZoneTier(100, 10000, 9000),
-            ZoneTier(100, 10000, 8000),
-            ZoneTier(1000, 1000, 6000),
-            ZoneTier(1000, 10000, 4000),
-            ZoneTier(1000, 10000, 1000),
-            ZoneTier(10000, 10000, 500),
-            ZoneTier(10000, 10000, 100),
-            ZoneTier(1000, 10000, 0),
-            //ZoneTier(100, 100, 0),
-        }) :
-        scene(scene),
-        nextZoneTime(scene->getTime() + zoneTiers[0].stayTime),
-        radius(zoneTiers[0].radius),
-        zoneTiers(zoneTiers),
-        lastPosition(spawnPosition),
-        position(spawnPosition),
-        newPosition(spawnPosition),
-        currentZoneTier(0) {}
+    SafeZone(Scene* scene, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
+            ZoneTier(5000, 1000, 2000),
+            ZoneTier(5000, 10000, 500),
+            ZoneTier(5000, 5000, 400),
+            ZoneTier(3000, 5000, 300),
+            ZoneTier(3000, 5000, 200),
+            ZoneTier(3000, 5000, 100),
+            ZoneTier(3000, 5000, 50),
+        });
     void update();
     void luaPush(lua_State *state);
     bool inZone(Character *player);

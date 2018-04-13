@@ -23,6 +23,8 @@ Scene::Scene() : flower(true, 2), grass(true, 1), land(true, 0), wall(false, 2),
     time(0),
     safeZone(new SafeZone(this, Vec2i(std::rand() % (Constants::SCENE_HEIGHT / 10) , rand() % (Constants::SCENE_WIDTH / 10)))) {
     std::srand(unsigned(std::time(0)));
+    safeZone(new SafeZone(this)) {
+    srand(unsigned(std::time(0)));
     tiles.resize(height);
     //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
     //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
@@ -329,6 +331,7 @@ void Scene::restart() {
     objects.clear();
     srand(std::time(0));
     safeZone = new SafeZone(this, Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10)));
+    safeZone = new SafeZone(this);
     srand(std::time(0));
     for (auto& player : players) {
         spawnPlayer(player.first, player.second);

@@ -2,6 +2,29 @@
 #include "SafeZone.h"
 
 namespace Engine {
+
+SafeZone::SafeZone(Scene* scene, std::vector<ZoneTier> zoneTiers) :
+    scene(scene),
+    nextZoneTime(scene->getTime() + zoneTiers[0].stayTime),
+    radius(zoneTiers[0].radius),
+    zoneTiers(zoneTiers),
+    currentZoneTier(0) {
+    srand(unsigned(std::time(0)));
+    int x, y;
+    if (scene->getWidth() <= radius * 2 || scene->getHeight() <= radius * 2) {
+        x = scene->getWidth() / 2;
+        y = scene->getHeight() / 2;
+    } else {
+        x = rand() % (scene->getWidth() - radius * 2) + radius;
+        y = rand() % (scene->getHeight() - radius * 2) + radius;
+    }
+    Vec2i spawnPosition(x, y);
+    lastPosition = spawnPosition;
+    position = spawnPosition;
+    newPosition = spawnPosition;
+}
+
+
 void SafeZone::update() {
     if (nextZoneTime == scene->getTime()) {
         if (currentZoneTier < zoneTiers.size() - 1) {
@@ -22,7 +45,6 @@ void SafeZone::update() {
             }
         }
     }
-    //std::cout << "Radius: " << radius << std::endl;
 }
 
 void SafeZone::luaPush(lua_State *state) {
@@ -53,8 +75,9 @@ int SafeZone::luaGetPosition(lua_State *state) {
 }
 
 int SafeZone::luaGetRadius(lua_State *state) {
-    lua_pushinteger(state, (int)(zoneTiers[currentZoneTier].radius * ((nextZoneTime - zoneTiers[currentZoneTier].stayTime - scene->getTime()) /
-                                                       ((double)zoneTiers[currentZoneTier].shrinkTime))));
+//    lua_pushinteger(state, (int)(zoneTiers[currentZoneTier].radius * ((nextZoneTime - zoneTiers[currentZoneTier].stayTime - scene->getTime()) /
+//                                                                      ((double)zoneTiers[currentZoneTier].shrinkTime))));
+    lua_pushinteger(state, radius);
     return 1;
 }
 
@@ -64,10 +87,26 @@ int SafeZone::luaGetNextPosition(lua_State *state) {
 }
 
 Vec2i SafeZone::genNextPosition() {
-    //int radius = zoneTiers[currentZoneTier].radius;
-    //return Vec2i(std::abs((position.getX() + (std::rand() % (2 * radius) - radius))) % scene->getWidth(),
-    //             std::abs(position.getY() + (std::rand() % (2 * radius) - radius)) % scene->getHeight());
+    if (scene->getWidth() <= radius * 2 || scene->getHeight() <= radius * 2)
+        return Vec2i(scene->getWidth() / 2, scene->getHeight() / 2);
+    int r = radius - zoneTiers[currentZoneTier].radius;
     std::srand(std::time(0));
-    return Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10));
+    int x = rand() % (r * 2) - r;
+    int range = pow(std::abs(pow(r, 2) + pow(x, 2)), 0.5);
+    int y = rand() % (range * 2) - range;
+    x += position.getX();
+    y += position.getY();
+    if (x > scene->getWidth())
+        x = scene->getWidth() * 2 - x;
+    if (y > scene->getHeight())
+        y = scene->getHeight() * 2 - y;
+    return Vec2i(x, y);
+
+//    std::srand(std::time(0));
+//    int radius = zoneTiers[currentZoneTier].radius;
+//    return Vec2i(std::abs((position.getX() + (std::rand() % (2 * radius) - radius))) % scene->getWidth(),
+//                 std::abs(position.getY() + (std::rand() % (2 * radius) - radius)) % scene->getHeight());
+//    std::srand(std::time(0));
+//    return Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10));
 }
 }

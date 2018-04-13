@@ -333,7 +333,7 @@ void Character::initLuaState() {
     L = luaL_newstate();
     *static_cast<Character**>(lua_getextraspace(L)) = this;
     //lua_Hook h(&dispatchHook<Character, &Character::luaCountHook>);
-    lua_sethook(L, dispatchHook<Character, &Character::luaCountHook>, LUA_MASKCOUNT, 100000); //todo tune up
+    lua_sethook(L, dispatchHook<Character, &Character::luaCountHook>, LUA_MASKCOUNT, 0); //todo tune up
 
     lua_pushglobaltable(L); //TODO: replace global environment with a safe environment
 #define E LUA_ENUM_HELPER
