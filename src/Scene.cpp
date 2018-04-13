@@ -21,13 +21,11 @@ Scene::Scene() : flower(true, 2), grass(true, 1), land(true, 0), wall(false, 2),
     height(Constants::SCENE_HEIGHT / Constants::TILE_HEIGHT),
     width(Constants::SCENE_WIDTH / Constants::TILE_WIDTH),
     time(0),
-    safeZone(new SafeZone(this, Vec2i(std::rand() % (Constants::SCENE_HEIGHT / 10) , rand() % (Constants::SCENE_WIDTH / 10)))) {
-    std::srand(unsigned(std::time(0)));
     safeZone(new SafeZone(this)) {
     srand(unsigned(std::time(0)));
     tiles.resize(height);
-    //spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
-    //                                     Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
+//    spawners["heal"] = new ObjectSpawner(this, new HealingItem(this, Vec2i(), HitBox(5, 5), 10, 3, 1, 600, 5, 100, 98),
+//                                         Vec2i(0, 0), Vec2i(width * Constants::TILE_WIDTH, height * Constants::TILE_HEIGHT), 100, 3000);
     spawners["exp"] = new ObjectSpawner(this, new ExpItem(this, Vec2i(), HitBox(5, 5), 100, 1, 1, 0, 0, 0, 99),
                                         Vec2i(10, 10), Vec2i(width * Constants::TILE_WIDTH - 10, height * Constants::TILE_HEIGHT - 10), 100, 30000);
     characterSpawners["player"] = new ObjectSpawner(this, new Player(this, "", ""), Vec2i(0, 0), Vec2i(Constants::SCENE_WIDTH - 40, Constants::SCENE_HEIGHT - 40));
@@ -120,6 +118,7 @@ void Scene::attack(Character *c1, Character *c2) {
             if (c2->getHp() <= 0) {
                 c1->setTarget(nullptr);
                 c1->gainExp(c2->getExpValue());
+                c1->gainHp(c2->getMaxHp());
             }
         }
 }
@@ -216,8 +215,8 @@ void Scene::luaPush(lua_State *L) {
 }
 
 void Scene::takeItem(Character *c, Item *i) {
-    //if (canTakeItem(c, i))
-    //    c->takeItem(i);
+//    if (canTakeItem(c, i))
+//        c->takeItem(i);
 }
 
 //private methods
@@ -330,7 +329,6 @@ void Scene::restart() {
     characters.clear();
     objects.clear();
     srand(std::time(0));
-    safeZone = new SafeZone(this, Vec2i(rand() % (Constants::SCENE_HEIGHT / 10), rand() % (Constants::SCENE_WIDTH / 10)));
     safeZone = new SafeZone(this);
     srand(std::time(0));
     for (auto& player : players) {

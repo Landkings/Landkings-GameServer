@@ -198,6 +198,7 @@ void Character::useItem(Item *item) {
 void Character::gainExp(int amount) {
     currentExp += amount;
     while (currentExp >= nextLevelExp) {
+        maxHitPoints = maxHitPoints * 1.5;
         hitPoints = maxHitPoints;
         currentExp -= nextLevelExp;
         ++level;
@@ -220,7 +221,7 @@ void Character::payAttackCost() {
 }
 
 int Character::getExpValue() {
-    return 250 + level * 100; //TODO: replace with constants
+    return 500 + level * 100; //TODO: replace with constants
 }
 
 GameObject *Character::clone() {
@@ -442,9 +443,9 @@ void Character::block() {
 }
 
 void Character::takeItem() {
-   //if (target && (target->getType() == ObjectType::HealingItem || target->getType() == ObjectType::ExpItem)) { //TODO: replace
-   //    scene->takeItem(this, item);
-   //}
+//   if (target && (target->getType() == ObjectType::HealingItem || target->getType() == ObjectType::ExpItem)) { //TODO: replace
+//       scene->takeItem(this, item);
+//   }
 }
 
 void HealingItem::use(Character *target) {
