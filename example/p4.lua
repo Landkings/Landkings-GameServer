@@ -95,8 +95,8 @@ function toZone(scene)
     moveToPoint(x, y, 0)
 end
 
-function runIfNeed(pos1, pos2)
-    if math.sqrt((pos1:getX() - pos2:getX()) ^ 2 + (pos1:getY() - pos2:getY()) ^ 2) < 110 then
+function runIfNeed(pos1, pos2, dist)
+    if math.sqrt((pos1:getX() - pos2:getX()) ^ 2 + (pos1:getY() - pos2:getY()) ^ 2) < dist then
         sprintIfCan()
     end
 end
@@ -109,9 +109,12 @@ function sprintIfCan()
 end
 
 function move(scene)
+    math.randomseed( os.time() )
+    if getAvailableSkillPoints() > 0 and dmgLVL == 0 then
+        dmgLVL = dmgLVL + 1
+    end
     if getParameterLevelUpCost(Parameters.AttackDamage) < getAvailableSkillPoints() then
     levelUp(Parameters.AttackDamage) 
-    dmgLVL = dmgLVL + 1
     end
     setTarget(getMe())
     setMovementType(MovementType.Default)
@@ -129,7 +132,7 @@ function move(scene)
                 min = d
                 if npcCount > 2 then
                     goAway(pos1, pos2)
-                    runIfNeed(pos1, pos2)
+                    runIfNeed(pos1, pos2, 160)
                 else
                     setAction(Action.Attack)
                     setAttackDirection(AttackDirection.Torso)
@@ -142,7 +145,7 @@ function move(scene)
                 setTarget(objects[i])
             else
                 goAway(pos1, pos2)
-                runIfNeed(pos1, pos2)
+                runIfNeed(pos1, pos2, 210)
             end
         end
     end

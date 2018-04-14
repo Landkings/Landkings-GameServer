@@ -244,9 +244,9 @@ public:
     void block(int amount);
     void takeItem(Item *item);
     void useItem(Item *item);
-    void gainExp(int amount);
+    virtual void gainExp(int amount);
     void payAttackCost();
-    int getExpValue();
+    virtual int getExpValue();
     GameObject* clone();
     ~Character();
 
@@ -370,6 +370,8 @@ class Player : public Character {
 public:
     Player(Scene *scene, Vec2i pos = Vec2i(), std::string tmpLuaName = "", HitBox hbox = HitBox(20, 20));
     Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos = Vec2i());
+    int getExpValue();
+    void gainExp(int amount);
 protected:
     void init();
 };

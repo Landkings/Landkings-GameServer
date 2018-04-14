@@ -55,6 +55,7 @@ void Engine::Engine::mainLoop()
 {
     std::srand(unsigned(std::time(0)));
     scene.addPlayer("johan", readCode("p3.lua"));
+    scene.addPlayer("Evil_God", readCode("p4.lua"));
 
     auto previous = std::chrono::system_clock::now();
     auto lag = previous - previous;

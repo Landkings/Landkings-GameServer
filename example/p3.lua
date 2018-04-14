@@ -67,8 +67,8 @@ function toZone(scene)
     chooseDir(dirx, diry)
 end
 
-function runIfNeed(pos1, pos2)
-    if math.sqrt((pos1:getX() - pos2:getX()) ^ 2 + (pos1:getY() - pos2:getY()) ^ 2) < 110 then
+function runIfNeed(pos1, pos2, dist)
+    if math.sqrt((pos1:getX() - pos2:getX()) ^ 2 + (pos1:getY() - pos2:getY()) ^ 2) < dist then
         sprintIfCan()
     end
 end
@@ -94,7 +94,7 @@ function move(scene)
             if objects[i]:getObjectType() == ObjectType.NPC then
                 min = d
                 goAway(pos1, pos2)
-                runIfNeed(pos1, pos2)
+                runIfNeed(pos1, pos2, 160)
             elseif objects[i]:getObjectType() == ObjectType.Player then
                 min = d
                 setAction(Action.Attack)

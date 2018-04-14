@@ -19,10 +19,10 @@ public:
     SafeZone(Scene* scene, std::vector<ZoneTier> zoneTiers = std::vector<ZoneTier>{
             ZoneTier(5000, 1000, 2000),
             ZoneTier(5000, 10000, 500),
-            ZoneTier(5000, 5000, 400),
-            ZoneTier(3000, 5000, 300),
-            ZoneTier(3000, 5000, 200),
-            ZoneTier(3000, 5000, 100),
+            ZoneTier(10000, 5000, 400),
+            ZoneTier(30000, 5000, 300),
+            ZoneTier(30000, 5000, 200),
+            ZoneTier(30000, 5000, 100),
             ZoneTier(3000, 5000, 50),
         });
     void update();

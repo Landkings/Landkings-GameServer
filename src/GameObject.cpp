@@ -196,15 +196,16 @@ void Character::useItem(Item *item) {
 }
 
 void Character::gainExp(int amount) {
-    currentExp += amount;
-    while (currentExp >= nextLevelExp) {
-        maxHitPoints = maxHitPoints * 1.5;
-        hitPoints = maxHitPoints;
-        currentExp -= nextLevelExp;
-        ++level;
-        ++skillPoints;
-        nextLevelExp = level * 500;
-    }
+//    currentExp += amount;
+//    while (currentExp >= nextLevelExp) {
+//        maxHitPoints = maxHitPoints * 1.1;
+//        hitPoints = maxHitPoints;
+//        currentExp -= nextLevelExp;
+//        ++level;
+//        ++skillPoints;
+//        nextLevelExp = 500;
+//        nextLevelExp = level * 500;
+//    }
 }
 
 void Character::payAttackCost() {
@@ -221,7 +222,8 @@ void Character::payAttackCost() {
 }
 
 int Character::getExpValue() {
-    return 500 + level * 100; //TODO: replace with constants
+    return 750;
+//    return 500 + level * 100; //TODO: replace with constants
 }
 
 GameObject *Character::clone() {
@@ -249,11 +251,11 @@ void Character::init() {
     nextMoveTime = 0;
     nextAttackTime = 0;
     nextStaminaRegenTime = 0;
-    moveCooldown = 4;
+    moveCooldown = 30;
     attackCooldown = 500; //160
     maxStamina = 100;
     attackRange = 45;
-    visionRange = 100;
+    visionRange = 150;
     stamina = maxStamina;
     attackDirection = AttackDirection::Torso;
     blockDirection = AttackDirection::Torso;
@@ -289,11 +291,11 @@ void Player::init() {
     nextMoveTime = 0;
     nextAttackTime = 0;
     nextStaminaRegenTime = 0;
-    moveCooldown = 2;
+    moveCooldown = 20;
     attackCooldown = 400; //160
     maxStamina = 400;
     attackRange = 45;
-    visionRange = 150;
+    visionRange = 200;
     stamina = maxStamina;
     attackDirection = AttackDirection::Torso;
     blockDirection = AttackDirection::Torso;
@@ -324,6 +326,23 @@ Player::Player(Scene *scene, Vec2i pos, std::string tmpLuaName, HitBox hbox) :
 Player::Player(Scene *scene, std::string luaCode, std::string name, Vec2i pos) :
         Character(scene, luaCode, name, pos, ObjectType::Player) {
     init();
+}
+
+int Player::getExpValue() {
+    return 1250;
+}
+
+void Player::gainExp(int amount) {
+    currentExp += amount;
+    while (currentExp >= nextLevelExp) {
+        maxHitPoints = maxHitPoints * 1.1;
+        hitPoints = maxHitPoints;
+        currentExp -= nextLevelExp;
+        ++level;
+        ++skillPoints;
+        nextLevelExp = 500;
+//        nextLevelExp = level * 500;
+    }
 }
 
 void Character::closeLuaState() {
